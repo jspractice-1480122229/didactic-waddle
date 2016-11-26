@@ -1,2 +1,2 @@
 # didactic-waddle
-javascript lurnin'
+That fancy javascript lurnin'!
