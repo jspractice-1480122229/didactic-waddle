@@ -1,0 +1,45 @@
+body {
+    font-family:   Verdana, Geneva, Arial, sans-serif;
+    color:         black;
+    background:    #E6E6FA;
+    text-decoration: blink;
+}
+
+h1, h2 {
+    color:         gray;
+    background:    #E5E5E5;
+    box-shadow: 10px 10px 4px #BFBFBF;
+    border: 1px dotted gray;
+}
+
+h1 {
+    border: 1px dotted black;
+}
+
+p {
+    background-color: #E5E5E5;
+    border: 1px dotted gray;
+    box-shadow: 5px 5px 2px #BFBFBF;
+}
+
+em {
+    font-family:   serif;
+/*    font-size:     18pt;
+    color:         brown;*/
+}
+
+p.greentea {
+    color:         green;
+}
+
+p.raspberry {
+    color:         #70c3f5; 
+}
+
+p.blueberry {
+    color:         purple;
+}
+
+p.cranberry {
+    color:         maroon;
+}

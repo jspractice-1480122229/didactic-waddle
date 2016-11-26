@@ -1,0 +1,26 @@
+body, p {
+	font-family: "Andale Mono", "Consolas", monospace;
+	color: #c0c0c0;
+	background-color: #000040;
+}
+
+p {
+	font-size: 14px;
+/*  white-space: pre-wrap; */
+}
+
+h1 {
+	font-size: 1.3em;
+}
+
+em {
+	font-size: 2em;
+}
+
+svg {
+	width:100px;
+}
+
+#error {
+	padding:0 1em;
+}
