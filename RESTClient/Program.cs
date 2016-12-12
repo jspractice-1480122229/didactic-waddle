@@ -1,5 +1,10 @@
 ﻿using System;
+using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Threading.Tasks;
+using System.Collections.Generic;
+using System.Runtime.Serialization.Json;
+using WebAPIClient;
 
 
 namespace ConsoleApplication
@@ -8,25 +13,30 @@ namespace ConsoleApplication
     {
         public static void Main(string[] args)
         {
-            var name = "Ger";
-            Console.WriteLine($"Hello {name}!");
-           // Console.WriteLine("Armadillo");
-        
-            string emptyString = String.Empty;
-            string nullString = null;
-
-            Console.WriteLine(emptyString); // prints nothing
-            Console.WriteLine(nullString); // prints nothing
-
-            // this line will print 0
-            Console.WriteLine($"1st string is {emptyString.Length} characters long.");
-
-            // this line will throw an exception (uncomment it to confirm)
-            Console.WriteLine($"2nd string is {nullString.Length} characters long.");
+            var repositories = ProcessRepositories().Result;
+            foreach (var repo in repositories)
+            {
+                Console.WriteLine(repo.Name);
+                Console.WriteLine(repo.Description);
+                Console.WriteLine(repo.GitHubHomeUrl);
+                Console.WriteLine(repo.Homepage);
+                Console.WriteLine(repo.Watchers);
+                Console.WriteLine();
+            }
         }
 
-        private static async Task ProcessRepositories()
+        private static async Task<List<Repository>> ProcessRepositories()
         {
+            var client = new HttpClient();
+            client.DefaultRequestHeaders.Accept.Clear();
+            client.DefaultRequestHeaders.Accept.Add(
+                new MediaTypeWithQualityHeaderValue("application/vnd.github.v3+json"));
+            client.DefaultRequestHeaders.Add("User-Agent", ".NET Foundation Repository Reporter");
+
+            var serializer = new DataContractJsonSerializer(typeof(List<Repository>));
+            var streamTask = client.GetStreamAsync("https://api.github.com/orgs/dotnet/repos");
+            var repositories = serializer.ReadObject(await streamTask) as List<Repository>;
+            return repositories;
 
         }
     
