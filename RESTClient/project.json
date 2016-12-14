@@ -4,16 +4,17 @@
     "debugType": "portable",
     "emitEntryPoint": true
   },
-  "dependencies": {},
+  "dependencies": {
+    "System.Runtime.Serialization.Json": "4.0.2",
+    "System.Runtime.Serialization.Primitives": "4.1.1"
+  },
   "frameworks": {
     "netcoreapp1.1": {
       "dependencies": {
         "Microsoft.NETCore.App": {
           "type": "platform",
           "version": "1.1.0"
-        },
-        "System.Runtime.Serialization.Json": "4.0.2",
-        "System.Runtime.Serialization.Primitives": "4.1.1"
+        }
       },
       "imports": "dnxcore50"
     }
