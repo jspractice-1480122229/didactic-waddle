@@ -1,24 +1,37 @@
+using System;
 using System.Runtime.Serialization;
+using System.Globalization;
 
 namespace WebAPIClient
 {
-    [DataContractAttribute(Name="repo")]
+    [DataContract(Name="repo")]
     public class Repository
     {
-        [DataMemberAttribute(Name="name")]
+        [DataMember(Name="name")]
         public string Name {get; set;}
 
-        [DataMemberAttribute(Name="description")]
+        [DataMember(Name="description")]
         public string Description { get; set; }
 
-        [DataMemberAttribute(Name="html_url")]
+        [DataMember(Name="html_url")]
         public Uri GitHubHomeUrl { get; set; }
 
-        [DataMemberAttribute(Name="homepage")]
+        [DataMember(Name="homepage")]
         public Uri Homepage { get; set; }
 
-        [DataMemberAttribute(Name="watchers")]
+        [DataMember(Name="watchers")]
         public int Watchers { get; set; }
+        
+        [DataMember(Name="pushed_at")]
+        private string JsonDate { get; set; }
 
+        [IgnoreDataMember]
+        public DateTime LastPush
+        {
+            get
+            {
+                return DateTime.ParseExact(JsonDate, "yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture);
+            }
+        }
     }
 }

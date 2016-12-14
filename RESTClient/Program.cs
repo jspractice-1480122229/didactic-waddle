@@ -1,13 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
-using System.Collections.Generic;
 using System.Runtime.Serialization.Json;
-using WebAPIClient;
 
-
-namespace ConsoleApplication
+namespace WebAPIClient
 {
     public class Program
     {
@@ -21,6 +19,7 @@ namespace ConsoleApplication
                 Console.WriteLine(repo.GitHubHomeUrl);
                 Console.WriteLine(repo.Homepage);
                 Console.WriteLine(repo.Watchers);
+                Console.WriteLine(repo.LastPush);
                 Console.WriteLine();
             }
         }
@@ -34,11 +33,10 @@ namespace ConsoleApplication
             client.DefaultRequestHeaders.Add("User-Agent", ".NET Foundation Repository Reporter");
 
             var serializer = new DataContractJsonSerializer(typeof(List<Repository>));
+
             var streamTask = client.GetStreamAsync("https://api.github.com/orgs/dotnet/repos");
             var repositories = serializer.ReadObject(await streamTask) as List<Repository>;
             return repositories;
-
         }
-    
     }
 }
