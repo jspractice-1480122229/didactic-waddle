@@ -1,6 +1,4 @@
-RESTClient/.vscode
-RESTClient/.vscode/launch.json
-RESTClient/.vscode/tasks.json
+.vscode
 RESTClient/bin/*
 RESTClient/obj/*
 RESTClient/project.lock.json
