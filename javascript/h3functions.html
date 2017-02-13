@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="generator" content="HTML Tidy for HTML5 for Linux version 5.3.15">
+  <title>Calling Functions</title>
+  <meta content="text/html; charset=utf-8" http-equiv="content-type">
+  <link href="css/local-style.css" rel="stylesheet" type="text/css">
+  <script type="text/javascript">
+  function buttonReport(buttonId, buttonName, buttonValue) {
+  // information about the id of the button
+    var userMessage1 = "Button id: " + buttonId + "\n";
+  // then about the button name
+    var userMessage2 = "Button name: " + buttonName + "\n";
+  // and the button value
+    var userMessage3 = "Button value: " + buttonValue;
+  // alert the user
+    alert(userMessage1 + userMessage2 + userMessage3);
+  }
+  var myName=prompt("Do you wong fu?")
+  alert(myName)
+  </script>
+</head>
+<body>
+  <p>
+  <input id="id1" name="Left Hand Button" onclick="buttonReport(this.id, this.name, this.value)" type="button"value="Left">
+  <input id="id2" name="Center Button" onclick="buttonReport(this.id, this.name, this.value)" type="button"value="Center">
+  <input id="id3" name="Right Hand Button" onclick="buttonReport(this.id, this.name, this.value)" type="button" value="Right">
+  </p>
+</body>
+</html>
