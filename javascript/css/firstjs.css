@@ -1,0 +1,10 @@
+body {
+  /*XKCD 'battleshipgrey' from http://www.w3schools.com/colors/colors_xkcd.asp */
+  background-color: #6B7C85;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+h1 {
+  color: white;
+  margin-left: 40px;
+}
