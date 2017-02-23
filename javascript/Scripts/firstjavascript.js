@@ -1,4 +1,4 @@
-var answer = prompt('What is the capital of New York?')
+var answer = prompt('What is the capital of New York?').toLocaleLowerCase()
 
 if(answer === 'Albany' ) {
   alert('You are correct!')
