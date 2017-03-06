@@ -1,7 +1,7 @@
-alert(document.lastModified);
-alert(document.title);
-var theSum = 9 + 9;
-alert(theSum);
+window.alert(document.lastModified)
+window.alert(document.title)
+var theSum = 9 + 9
+window.alert(theSum)
 /*
 var productCount = 2;
 var subtotal = 14.98;

@@ -1,11 +1,9 @@
-var answer = prompt('What is the capital of New York?')
+var answer = window.prompt('What is the capital of New York?')
 
-if(answer === 'Albany' ) {
-  alert('You are correct!')
+if (answer === 'Albany') {
+  window.alert('You are correct!')
+} else {
+  window.alert('Sorry, ' + answer + ' is not correct.\n PLEASE NOTE: Case matters.')
 }
-else {
-  alert('Sorry, ' + answer + ' is not correct.\n PLEASE NOTE: Case matters.')
-}
 
-var faveAnimal = prompt('What is your favorite animal?')
-
+var faveAnimal = window.prompt('What is your favorite animal?')

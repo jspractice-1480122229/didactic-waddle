@@ -1,10 +1,10 @@
 var example = 'value'
 
-function alertExample() {
-  alert(example)
+function alertExample () {
+  window.alert(example)
   var anotherExample = '?'
 }
 
 alertExample()
 
-alert(anotherExample)
+window.alert(anotherExample)

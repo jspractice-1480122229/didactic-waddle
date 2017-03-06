@@ -9,10 +9,10 @@ var myCoffee = {
   ounces: 100,
   milk: true,
 
-  reheat: function() {
-    if(myCoffee.temperature != 'piping hot'){
+  reheat: function () {
+    if (myCoffee.temperature !== 'piping hot') {
       myCoffee.temperature = 'piping hot'
-      alert('Your coffee has been reheated!')
+      window.alert('Your coffee has been reheated!')
     }
   }
 }
