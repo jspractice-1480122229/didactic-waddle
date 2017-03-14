@@ -3,6 +3,36 @@
       font-size: 12px;
     }
     
+    a:visited {
+      color: #778899;
+      text-decoration: none;
+    }
+
+    a:link {
+      color: #ffffff;
+      text-decoration: none;
+    }
+
+    a:hover, a:active {
+      color: #FF9933;
+      text-decoration: none;
+    }
+    
+    .links, .footer {
+      width: 100%;
+      border: 2px solid;
+      margin-top: 10px;
+      margin-bottom: 10px;
+      text-align: center;
+      background: #1C1C1C;
+      color: #ffffff;
+      text-decoration: none;
+    }
+
+    .footer {
+      font-size: 9px
+    }
+
     div.title {
       font-size: 22px;
       font-weight: bold;
@@ -18,67 +48,6 @@
       text-align: center;
       padding: 0px;
       margin: 0px;
-    }
-    
-    div.links {
-      width: 100%;
-      border: 2px solid;
-      margin-top: 10px;
-      margin-bottom: 10px;
-      text-align: center;
-      background: #1C1C1C;
-      color: #ffffff;
-    }
-    
-    div.links a:link {
-      color: #ffffff;
-      text-decoration: none;
-    }
-    
-    div.links a:visited {
-      color: #ffffff;
-      text-decoration: none;
-    }
-    
-    div.links a:hover {
-      color: #FF9933;
-      text-decoration: none;
-    }
-    
-    div.links a:active {
-      color: #FF9933;
-      text-decoration: none;
-    }
-    
-    div.footer {
-      width: 100%;
-      border: 2px solid;
-      margin-top: 10px;
-      margin-bottom: 10px;
-      text-align: center;
-      font-size: 9px;
-      background: #1C1C1C;
-      color: #ffffff;
-    }
-    
-    div.footer a:link {
-      color: #ffffff;
-      text-decoration: none;
-    }
-    
-    div.footer a:visited {
-      color: #ffffff;
-      text-decoration: none;
-    }
-    
-    div.footer a:hover {
-      color: #FF9933;
-      text-decoration: none;
-    }
-    
-    div.footer a:active {
-      color: #FF9933;
-      text-decoration: none;
     }
     
     div.section-outter {
@@ -100,8 +69,24 @@
       margin: 10px;
     }
     
-    div.section-code {
+    div.code-embed {
+      position: relative;
+      background-color: #1C1C1C;
+      border-radius: 5px;
+      color: #D0D0D0;
+      display: block;
+      text-align: center;
+      font: 11px Monaco, monospace;
       margin: 10px;
+      overflow: auto;
+      padding: 15px;
+      -webkit-border-radius: 5px;
+      -moz-border-radius: 5px;
+      line-height: 125%
+    }
+    
+    div.code-embed span {
+      color: #ed9d13;
     }
     
     div.banner {

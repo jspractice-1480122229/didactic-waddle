@@ -14,9 +14,12 @@
   <div class="subtitle">
     "if there's one thing everyone should learn in perl, this is it"
   </div>
-  <script type="text/javascript" src="scripts/perlpie0.js"></script>
+  <div class="code-embed">
+    <code>perl -p -i -e <span>&#39;s/foo/bar/gi&#39;</span>
+    </code>
+  </div>
   <div class="links">
-    <a href="http://web.archive.org/web/20130617110924/http://perlpie.com/">Web Archive copy</a> | <a href="mailto:perlpie@mailforger.com">Contact</a> | <a href="http://technosophos.com/2009/05/21/perl-pie-if-you-only-learn-how-do-one-thing-perl-it.html">Inspired by</a>
+    <a href="http://web.archive.org/web/20130617110924/http://perlpie.com/">Web Archive copy</a> | <script src="scripts/mailto.js"></script> | <a href="http://technosophos.com/2009/05/21/perl-pie-if-you-only-learn-how-do-one-thing-perl-it.html">Inspired by</a>
   </div>
   <div class="section-outter">
     <div class="section-title">
@@ -26,8 +29,9 @@
       This will search all text files in the current directory for the word "SOME_NAME" and replace it with my name "Ger". This regex ends with "/gi" which the "i" means ignore case, so it will change any spelling of the word "SOME_WORD" have it be upper or lower case spelling of it.<br>
       Note also that you can just type in the full file name istead of "*.txt" and do the one single file.
     </div>
-    <div class="section-code">
-      <script type="text/javascript" src="scripts/perlpie1.js"></script>
+    <div class="code-embed">
+      <code>perl -p -i -e <span>&#39;s/SOME_NAME/Ger/gi&#39;</span> ./*.txt
+      </code>
     </div>
   </div>
   <div class="section-outter">
@@ -37,8 +41,9 @@
     <div class="section-notes">
       This is the same as above only diffrence is it will change it only in files with the name of "filename"
     </div>
-    <div class="section-code">
-      <script type="text/javascript" src="scripts/perlpie2.js"></script>
+    <div class="code-embed">
+      <code>perl -p -i -e <span>&#39;s/foo/bar&#39; `find . -name &quot;filename&quot;`</span> ./*.txt
+      </code>
     </div>
   </div>
   <div class="footer">
