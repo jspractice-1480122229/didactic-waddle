@@ -7,12 +7,14 @@
   <link rel="stylesheet" type="text/css" href="css/local-style.css">
 </head>
 <body>
-  <div id="div1">
-    Lorem ipsum dolor sit amet, consectetur adipisicing elit. Architecto dolorum quibusdam aliquam nam, numquam dolor placeat commodi consequatur, dolore cumque omnis minima quidem, tempora voluptatibus.
+  <div id="gebi">
+      <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit. Architecto dolorum quibusdam aliquam nam, numquam dolor placeat commodi consequatur, dolore cumque omnis minima quidem, tempora voluptatibus.</p>
   </div>
   <script>
-    var myDiv = document.getElementById("div1")
+    var myDiv = document.getElementById('gebi').innerHTML
+    console.log(myDiv)
     alert(myDiv)
+    document.getElementById('gebi').innerHTML = '\<p\>Vincent 52\<\/p\>'
   </script>
   <div>
     <a href="index.html">Home</a>

@@ -1,2 +1,2 @@
-var mydate = new Date(dateString);
-alert(mydate);
+var mydate = new Date(dateString)
+window.alert(mydate)
