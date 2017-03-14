@@ -1,0 +1,109 @@
+    body {
+      font-family: 'Courier New', Georgia, Verdana, Tahoma, Helvetica, Arial;
+      font-size: 12px;
+    }
+    
+    div.title {
+      font-size: 22px;
+      font-weight: bold;
+      text-align: center;
+      padding: 10px;
+      margin: 0px;
+    }
+    
+    div.subtitle {
+      font-size: 10px;
+      font-style: italic;
+      font-weight: normal;
+      text-align: center;
+      padding: 0px;
+      margin: 0px;
+    }
+    
+    div.links {
+      width: 100%;
+      border: 2px solid;
+      margin-top: 10px;
+      margin-bottom: 10px;
+      text-align: center;
+      background: #1C1C1C;
+      color: #ffffff;
+    }
+    
+    div.links a:link {
+      color: #ffffff;
+      text-decoration: none;
+    }
+    
+    div.links a:visited {
+      color: #ffffff;
+      text-decoration: none;
+    }
+    
+    div.links a:hover {
+      color: #FF9933;
+      text-decoration: none;
+    }
+    
+    div.links a:active {
+      color: #FF9933;
+      text-decoration: none;
+    }
+    
+    div.footer {
+      width: 100%;
+      border: 2px solid;
+      margin-top: 10px;
+      margin-bottom: 10px;
+      text-align: center;
+      font-size: 9px;
+      background: #1C1C1C;
+      color: #ffffff;
+    }
+    
+    div.footer a:link {
+      color: #ffffff;
+      text-decoration: none;
+    }
+    
+    div.footer a:visited {
+      color: #ffffff;
+      text-decoration: none;
+    }
+    
+    div.footer a:hover {
+      color: #FF9933;
+      text-decoration: none;
+    }
+    
+    div.footer a:active {
+      color: #FF9933;
+      text-decoration: none;
+    }
+    
+    div.section-outter {
+      width: 100%;
+      border: 2px solid;
+      margin-top: 10px;
+      margin-bottom: 10px;
+    }
+    
+    div.section-title {
+      margin: 5px;
+      font-size: 14px;
+      font-weight: bold;
+      text-decoration: underline;
+    }
+    
+    div.section-notes {
+      font-size: 12px;
+      margin: 10px;
+    }
+    
+    div.section-code {
+      margin: 10px;
+    }
+    
+    div.banner {
+      text-align: center;
+    }
