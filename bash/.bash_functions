@@ -33,6 +33,22 @@ for i in *.aiff
     do ffmpeg -n -i "$i" -metadata encoded_by="Processed by Zeranoe FFmpeg builds for Windows, ffmpeg-v.N-82759-g1f5630a" -f mp3 -acodec libmp3lame -ab 192k -ar 44100 -id3v2_version 3 -write_id3v1 1 -vsync 2 $OUTPUT_DIR/"${i%.aiff}.mp3"
     done
 }
+#apt-get remove shortcut
+function nuke()
+{
+    sudo apt-get --yes purge "$1";
+    sudo apt-get --yes autoremove;
+    sudo apt-get clean;
+}
+
+#apt-get install shortcut
+function gimme()
+{
+    sudo apt-get update;
+    sudo apt-get --yes install "$1";
+    sudo apt-get --yes autoremove;
+    sudo apt-get clean;
+}
 
 #Make random, dummy files
 function dummyfile()
@@ -51,6 +67,9 @@ function guidmaker()
             let "a-=1"
         done
 }
+#"history" search
+function hs()
+{ history | grep "$1" ; }
 
 #5 digit random integer
 function 5digit()
@@ -76,6 +95,7 @@ for i in *.mp3
     do ffmpeg -n -i "$i" -metadata genre="Podcast" -metadata encoded_by="Processed by Zeranoe FFmpeg builds for Windows, ffmpeg-v.N-79107-g30d1213" -ac 1 -ab 40k -ar 22050 -id3v2_version 3 -write_id3v1 1 -vsync 2 "$OUTPUT_DIR"/"$i"
     done
 }
+
 # Make 898 max width still
 function maxwidth898()
 {
