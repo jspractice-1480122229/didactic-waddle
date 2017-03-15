@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en-US">
-
 <head>
   <meta name="generator" content="HTML Tidy for HTML5 for Linux version 5.4.0">
   <link rel="stylesheet" type="text/css" href="css/perlpie.css">
@@ -8,7 +7,6 @@
   <link rel="icon" href="favicon.ico" type="image/x-icon">
   <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
 </head>
-
 <body>
   <div class="title">
     perl -p -i -e .com
@@ -17,75 +15,65 @@
     "if there's one thing everyone should learn in perl, this is it"
   </div>
   <div class="code-embed">
-    <code>perl -p -i -e <span>&#39;s/foo/bar/gi&#39;</span>
-    </code>
+    <code>perl -p -i -e <span>'s/foo/bar/gi'</span></code>
   </div>
   <div class="links">
-    <a href="http://web.archive.org/web/20130617110924/http://perlpie.com/">Web Archive copy</a> |
-    <script src="scripts/mailto.js"></script>
-    <noscript>Email address is javascripted. Sorry!</noscript> | <a href="http://technosophos.com/2009/05/21/perl-pie-if-you-only-learn-how-do-one-thing-perl-it.html">Inspired by</a>
+    <a href="http://web.archive.org/web/20130617110924/http://perlpie.com/">Web Archive copy</a> | 
+    <script src="scripts/mailto.js"></script> <noscript>Email address is 'perlpie AT MailForGer DOT com'</noscript> | <a href="http://technosophos.com/2009/05/21/perl-pie-if-you-only-learn-how-do-one-thing-perl-it.html">Inspired by</a>
   </div>
   <div class="section-outter">
     <div class="section-title">
-      Perl Pie : Replace String in Files
+      <p>Perl Pie : Replace String in Files</p>
     </div>
     <div class="code-embed">
-      <code>perl -p -i -e <span>&#39;s/SOME_NAME/Ger/gi&#39;</span> ./*.txt
-      </code>
+      <code>perl -p -i -e <span>'s/SOME_NAME/Ger/gi'</span> ./*.txt</code>
     </div>
     <div class="section-notes">
-      This will search all text files in the current directory for the word "SOME_NAME" and replace it with my name, "Ger". This
-      regex ends with "/gi", in which the "i" means 'ignore case', so it will change any spelling of "SOME_NAME", have it
-      be the upper or lower case spelling of it e.g. "Some_Name", "Some_NAME", "SoMe_NaME" and the like.<br> Note also
-      that you can just type in the full file name istead of "*.txt" and do the one single file.
-    </div>
-  </div>
-  <div class="section-outter">
-    <div class="section-title">
-      Perl Pie : Replace String in Named Files, recursively
-    </div>
-    <div class="code-embed">
-      <code>perl -p -i -e <span>&#39;s/foo/bar&#39; `find . -name &quot;filename&quot;`</span>
-      </code>
-    </div>
-    <div class="section-notes">
-      This is the same as above, only diffrence is it will change it only in files with the name of "filename" in the current and
-      any subdirectories so if you have a structure like <br />
-      <code>./filename<br />
-        ./bkp/filename<br />
-        ./original/filename<br />
-      </code> it will overwrite them all.
+      This will search all text files in the current directory for the word "SOME_NAME" and replace it with my name, "Ger". This regex ends with "/gi", in which the "i" means 'ignore case', so it will change any spelling of "SOME_NAME", have it be the
+      upper or lower case spelling of it e.g. "Some_Name", "Some_NAME", "SoMe_NaME" and the like.<br>
+      Note also that you can just type in the full file name istead of "*.txt" and do the one single file.
     </div>
   </div>
   <div class="section-outter">
     <div class="section-title">
-      Perl Pie : Make a backup with '-i.bkp' (or any extension you choose).
+      <p>Perl Pie : Replace String in Named Files, recursively</p>
     </div>
     <div class="code-embed">
-      <code>perl -p -i<em>.bkp</em> -e <span>&#39;s/SOME_NAME/Ger/gi&#39;</span> ./*.txt
-      </code><br />
-      <code>perl -p -i<em>.bkp</em> -e <span>&#39;s/foo/bar&#39; `find . -name &quot;filename&quot;`</span>
-      </code>
+      <code>perl -p -i -e <span>'s/foo/bar' `find . -name "filename"`</span></code>
     </div>
     <div class="section-notes">
-      This is safer than either method above, as a backup will be made when the changes to all those *.txt and "filename" are changed
-      recursively, like so:<br />
-      <code>./myname.txt<br />
-        ./myname.txt.bkp<br />
-        ./theFavorite.txt<br />
-        ./theFavorite.txt.bkp<br />
-        ./filename<br />
-        ./filename.bkp<br />
-        ./bkp/filename<br />
-        ./bkp/filename.bkp<br />
-        ./original/filename<br />
-        ./original/filename.bkp<br />
-      </code> Please note that this is a silly scenario but, if you are a beginner, safety first!
+      This is the same as above, only diffrence is it will change it only in files with the name of "filename" in the current and any subdirectories so if you have a structure like
+      <pre><code>./filename
+./bkp/filename
+./original/filename
+      </code></pre>it will overwrite them all.
+    </div>
+  </div>
+  <div class="section-outter">
+    <div class="section-title">
+      <p>Perl Pie : Make a backup with '-i.bkp' (or any extension you choose).</p>
+    </div>
+    <div class="code-embed">
+      <code>perl -p -i<em>.bkp</em> -e <span>'s/SOME_NAME/Ger/gi'</span> ./*.txt</code><br />
+      <code>perl -p -i<em>.bkp</em> -e <span>'s/foo/bar' `find . -name "filename"`</span></code>
+    </div>
+    <div class="section-notes">
+      This is safer than either method above, as a backup will be made when the changes to all those *.txt and "filename" files are made recursively, like so:
+      <pre><code>./myname.txt
+./myname.txt.bkp
+./theFavorite.txt
+./theFavorite.txt.bkp
+./filename
+./filename.bkp
+./bkp/filename
+./bkp/filename.bkp
+./original/filename
+./original/filename.bkp
+      </code></pre>Please note that this is a silly scenario but, if you are a beginner, safety first!
     </div>
   </div>
   <div class="footer">
-    Modified from perlpie.com, pulled from Web Archive | Original site design by: <a href="http://krissimmons.com/">Kristopher Simmons</a>    &mdash; Copyleft 2017
+    Modified from perlpie.com, pulled from Web Archive | Original site design by: <a href="http://krissimmons.com/">Kristopher Simmons</a> &mdash; Copyleft 2017
   </div>
 </body>
-
 </html>
