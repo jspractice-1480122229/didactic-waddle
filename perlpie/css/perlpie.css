@@ -2,7 +2,13 @@
       font-family: 'Courier New', Georgia, Verdana, Tahoma, Helvetica, Arial;
       font-size: 12px;
     }
-    
+
+    br {
+      line-height: 150%;
+    }
+    em {
+      color: #f00
+    }
     a:visited {
       color: #778899;
       text-decoration: none;
