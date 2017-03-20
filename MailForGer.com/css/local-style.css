@@ -1,0 +1,29 @@
+body, p {
+  font-family: "Andale Mono", "Consolas", monospace;
+  color: #c0c0c0;
+  background-color: #000040;
+  text-align: center;
+}
+p {
+  font-size: 14px;
+  /*  white-space: pre-wrap; */
+}
+h1 {
+  font-size: 1.3em;
+}
+em {
+  font-size: 2em;
+}
+svg {
+  width: 100px;
+}
+#error {
+  padding: 0 1em;
+}
+footer.billboard {
+  background-image: url("http://orig14.deviantart.net/9db6/f/2013/249/7/c/pink_flower_png_by_hanabell1-d6l7hc0.png") center;
+  background-repeat: no-repeat;
+  background-size: contain;
+	background-position: center;
+  image-rendering: auto;
+}
