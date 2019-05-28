@@ -4,4 +4,5 @@ RESTClient/obj/*
 RESTClient/project.lock.json
 MailForGer.com/latest/*
 MailForGer.com/scripts/favicon.ico
+package.json
 
