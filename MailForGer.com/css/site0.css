@@ -4,6 +4,7 @@ body {
   max-width: 960px;
   align-content: space-between;
   text-align: center;
+  align-self: center
 }
 div {
   background-color: #999;

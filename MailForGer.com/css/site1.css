@@ -2,7 +2,10 @@ body, p {
   font-family: "Andale Mono", "Consolas", monospace;
   color: #c0c0c0;
   background-color: #000040;
+  min-width: 320px;
+  max-width: 960px;
   text-align: center;
+  align-content: center;
 }
 p {
   font-size: 14px;
