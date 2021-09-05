@@ -3,9 +3,143 @@
 # File & string-related functions:
 #-------------------------------------------------------------
 
+#######################
+#                     #
+# sound stuff section #
+#                     #
+####################### 
+
+#rip from youtube
+function ripytsong() {
+    youtube-dl --write-all-thumbnails --prefer-ffmpeg -x --audio-format mp3 --audio-quality 5 "$1"
+}
+
+#download best quality yt clip
+dlbestytclip() {
+    youtube-dl -F --no-check-certificate "$1" | grep \)$ | gawk -F\  '{print $1}' > 0.tmp
+    best=$(<0.tmp)
+    ##\rm 0.tmp
+    youtube-dl -f --no-check-certificate "$best" "$1"
+}
+
+#make MP3 files louder with Lame
+function louder()
+{
+    lame --scale 2 "$1" tmp.tmp
+    swap tmp.tmp "$1"
+    rm -fv tmp.tmp
+}
+
+##################
+#                #
+# MS SQL section #
+#                #
+##################
+
+#restart MS SQL
+function yesmssql()
+{
+    systemctl list-units | grep --color mssql
+    sudo systemctl restart mssql-server.service
+    systemctl list-units | grep --color mssql
+    echo "MS SQL (mssql-server) should read 'active'."
+}
+
+#stop MS SQL
+function nomssql()
+{
+   systemctl list-units | grep --color mssql
+   sudo systemctl stop mssql-server.service
+   echo "MS SQL (mssql-server) should be stopped and this next line is the prompt."
+   systemctl list-units | grep --color mssql
+}
+
+#flac to 256k mp3
+function flacto256kmp3()
+{
+OUTPUT_DIR=256kmp3
+if [ ! -d $OUTPUT_DIR ]; then
+     mkdir $OUTPUT_DIR
+fi
+if [ ! -f $OUTPUT_DIR/"$i" ]; then
+    for i in *
+    do
+        echo "$i"
+#        echo "${i%.flac}.mp3"
+#    do ffmpeg -i "$i" -q:a 4 -id3v2_version 3 -write_id3v1 1 -n $OUTPUT_DIR/"${i%.flac}.mp3"
+    done
+fi
+}
+
+#convert *nix epoch time to regular
+function epoch() {
+    date --date=@"$1"
+} 
+
+# shrinky PDFy
+teenypdf()
+{
+    gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dNOPAUSE -dBATCH  -dQUIET -sOutputFile="$2" "$1"
+}
+
+# knocking other users off the system, for work
+function bumpothers()
+{
+    sudo pkill -KILL -u steby
+    sudo pkill -KILL -u jeny
+    sudo pkill -KILL -u pia
+}
+
+#****************************************#
+#         MajorSpoilersShrinkMP3         #
+#****************************************#
+function MajorSpoilersShrinkMP3()
+{
+OUTPUT_DIR=compressed
+if [ ! -d $OUTPUT_DIR ]; then
+     mkdir $OUTPUT_DIR
+fi
+if [ ! -f $OUTPUT_DIR/"$i" ]; then
+    for i in *.mp3
+    do ffmpeg -i "$i" -metadata genre="Podcast" -metadata encoded_by="ffmpeg version 3.3.4-2" -metadata copyright="2006-2018 Major Spoilers Entertainment, LLC." -ac 1 -ab 40k -ar 22050 -id3v2_version 3 -write_id3v1 1 -vsync 2 -n $OUTPUT_DIR/"$i"
+    done
+fi
+}
+
+#aacto128kmp3
+function aacto128kmp3()
+{
+OUTPUT_DIR=aacto128kmp3
+if [ ! -d $OUTPUT_DIR ]; then
+     mkdir $OUTPUT_DIR
+fi
+if [ ! -f $OUTPUT_DIR/"$i" ]; then
+    for i in *.aac
+    do ffmpeg -i "$i" -c:a libmp3lame -ac 2 -q:a 2 -id3v2_version 3 -write_id3v1 1 -vsync 2 -n $OUTPUT_DIR/"${i%.aac}.mp3"
+    done
+fi
+}
+
+function mp42webm()
+{
+FILE="$1"; 
+ffmpeg -i "${FILE}" -f webm -c:v libvpx -b:v 1M -acodec libvorbis -y "${FILE%.mp4}.webm"
+}
+
+#Converty .mkv to mp3
+function mkv2mp3() {
+find . -type f -name "*.mkv" -exec bash -c 'FILE="$1"; ffmpeg -i "${FILE}" -vn -c:a libmp3lame -y "${FILE%.mkv}.mp3";' _ '{}' \;
+}
+
+#random word list
+function wordlist() {
+    fortune -l -n 145 | gawk '{print toupper($0)}' | sed -r 's|\ |\n|g' | sed 's|\W||g' | sed -e '/.\{5\}/!d' | sort -u | shuf 
+}
+
 #PONIES!!!
 function ponies() {
-    fortune | awk '{print toupper($0)}' | ponythink -b unicode
+#    fortuna | awk '{print toupper($0)}' | ponythink -b unicode
+    fortuna | ponythink -b unicode
 }
 
 #Convert .webm to 192k bitrate .mp3 files
@@ -33,22 +167,6 @@ for i in *.aiff
     do ffmpeg -n -i "$i" -metadata encoded_by="Processed by Zeranoe FFmpeg builds for Windows, ffmpeg-v.N-82759-g1f5630a" -f mp3 -acodec libmp3lame -ab 192k -ar 44100 -id3v2_version 3 -write_id3v1 1 -vsync 2 $OUTPUT_DIR/"${i%.aiff}.mp3"
     done
 }
-#apt-get remove shortcut
-function nuke()
-{
-    sudo apt-get --yes purge "$1";
-    sudo apt-get --yes autoremove;
-    sudo apt-get clean;
-}
-
-#apt-get install shortcut
-function gimme()
-{
-    sudo apt-get update;
-    sudo apt-get --yes install "$1";
-    sudo apt-get --yes autoremove;
-    sudo apt-get clean;
-}
 
 #Make random, dummy files
 function dummyfile()
@@ -57,6 +175,10 @@ function dummyfile()
     randumb | cat >> "$1"           
 }
 
+#history search
+function hs()
+{ history | grep "$1" ; }
+
 #GUID maker
 function guidmaker()
 {
@@ -64,12 +186,9 @@ function guidmaker()
     while [ "$a" -gt 0 ]
         do
             uuidgen -r | awk '{print toupper($0)}'
-            let "a-=1"
+            (( "a-=1" ))
         done
 }
-#"history" search
-function hs()
-{ history | grep "$1" ; }
 
 #5 digit random integer
 function 5digit()
@@ -203,6 +322,44 @@ for i in TN_*.jpg
 done
 }
 
+##################
+# system toolbox #
+##################
+
+#give me this app!!!
+gimme()
+{
+    sudo apt update
+    sudo apt -y install "$1"
+    sudo apt clean
+}
+
+#reinstall this app!!!
+tryagain()
+{
+    sudo apt update
+    sudo apt -y reinstall "$1"
+    sudo apt clean
+}
+
+#completely purge this app!!!
+nuke()
+{
+    sudo apt -y purge "$1"
+    sudo apt -y autoremove
+    sudo apt clean
+}
+
+#upgrade system
+iago()
+{
+    sudo apt update
+    sudo apt -y autoremove
+    sudo apt -y full-upgrade
+    sudo apt -y autoremove
+    sudo apt clean
+}
+
 # Make n-dupes of a file
 function dupe()
 { 
@@ -236,11 +393,11 @@ function scramble()
 
 # Find a file with a pattern in name:
 function ff()
-{ find . -type f -iname '*'$*'*' -ls ; }
+{ find . -type f -iname '*'"$*"'*' -ls ; }
 
 # Find a file with pattern $1 in name and Execute $2 on it:
 function fe()
-{ find . -type f -iname '*'${1:-}'*' -exec ${2:-file} {} \;  ; }
+{ find . -type f -iname '*'"${1:-}"'*' -exec "${2:-file}" {} \;  ; }
 
 # Find a pattern in a set of files and highlight them:
 # (needs a recent version of egrep)
@@ -264,13 +421,36 @@ Usage: fstr [-i] \"pattern\" [\"filename pattern\"] "
     fi
     find . -type f -name "${2:-*}" -print0 | \
     xargs -0 egrep --color=always -sn ${case} "$1" 2>&- | more
-
 }
 
-#cut last n lines in file, 10 by default
+# Find a pattern in a set of files BUT WITHOUT highlighting them:
+# (needs a recent version of egrep)
+function ncfstr()
+{
+    OPTIND=1
+    local case=""
+    local usage="ncfstr: find string in files, colorlessly.
+Usage: ncfstr [-i] \"pattern\" [\"filename pattern\"] "
+    while getopts :it opt
+    do
+        case "$opt" in
+        i) case="-i " ;;
+        *) echo "$usage"; return;;
+        esac
+    done
+    shift $(( $OPTIND - 1 ))
+    if [ "$#" -lt 1 ]; then
+        echo "$usage"
+        return;
+    fi
+    find . -type f -name "${2:-*}" -print0 | \
+    xargs -0 egrep --color=never -sn ${case} "$1" 2>&- | more
+}
+
+#cut last n lines in file, 20 by default
 function cuttail()
 {
-    nlines=${2:-10}
+    nlines=${2:-20}
     sed -n -e :a -e "1,${nlines}!{P;N;D;};N;ba" $1
 }
 
@@ -334,54 +514,62 @@ function pfimpf()
 # Some example functions:
 #
 # a) function settitle
- settitle ()
- {
+function settitle ()
+{
    echo -ne "\e]2;$@\a\e]1;$@\a";
- }
+}
 
 # b) function cd_func
-# This function defines a 'cd' replacement function capable of keeping,
+# This function defines a 'cd' replacement function capable of keeping, 
 # displaying and accessing history of visited directories, up to 10 entries.
 # To use it, uncomment it, source this file and try 'cd --'.
-# acd_func 1.0.5, 10-nov-2004
-# Petar Marinov, http:/geocities.com/h2428, this is public domain
- cd_func ()
- {
+# acd_func 1.0.6, 18-may-2013
+# Petar Marinov, http://geocities.com/h2428, this is public domain
+# Edited by Chris Olin, http://chrisolin.com, this is still public domian
+
+cd_func ()
+{
    local x2 the_new_dir adir index
    local -i cnt
-
+ 
    if [[ $1 ==  "--" ]]; then
      dirs -v
      return 0
    fi
-
+ 
    the_new_dir=$1
    [[ -z $1 ]] && the_new_dir=$HOME
-
+ 
    if [[ ${the_new_dir:0:1} == '-' ]]; then
      #
      # Extract dir N from dirs
      index=${the_new_dir:1}
      [[ -z $index ]] && index=1
      adir=$(dirs +$index)
-     [[ -z $adir ]] && return 1
+     if [[ -z "$adir" ]]; then
+         if [[ "$SHELL" == "/bin/zsh" ]]; then
+             cd ~${index}
+             return 0
+             else
+                echo "ADIR is null. Terminating." && return 1
+         fi
+     fi
      the_new_dir=$adir
    fi
-
+ 
    #
    # '~' has to be substituted by ${HOME}
    [[ ${the_new_dir:0:1} == '~' ]] && the_new_dir="${HOME}${the_new_dir:1}"
-
+ 
    #
    # Now change to the new dir and add to the top of the stack
    pushd "${the_new_dir}" > /dev/null
    [[ $? -ne 0 ]] && return 1
    the_new_dir=$(pwd)
-
-   #
+   
    # Trim down everything beyond 11th entry
    popd -n +11 2>/dev/null 1>/dev/null
-
+ 
    #
    # Remove any other occurence of this dir, skipping the top of the stack
    for ((cnt=1; cnt <= 10; cnt++)); do
@@ -393,7 +581,84 @@ function pfimpf()
        cnt=cnt-1
      fi
    done
-
+ 
    return 0
- }
+}
+
+#pull down and rebuild/install Warzone2100
+function wz()
+{
+    rd "${HOME}"/src/warzone2100/ 
+    cd "${HOME}"/src/ 
+    git clone --recurse-submodules --depth 1 https://github.com/Warzone2100/warzone2100 
+    mkdir warzone2100/build
+    cd warzone2100/build
+    cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX:PATH=/opt/warzone2100-latest -GNinja ..
+    sudo cmake --build . --target install 
+    cd
+}
+
+#what desktop am I running?
+function wutdt()
+{
+    printf 'Desktop: %s\nSession: %s\n' "$XDG_CURRENT_DESKTOP" "$GDMSESSION"
+}
+
+#Get PID to kill, from top
+function gettoppid()
+{
+    top -p $(pgrep -d , "$1")
+}
+
+#Get/Update vim
+function freshenvim()
+{
+    sudo apt -y install libncurses5-dev libgtk2.0-dev libatk1.0-dev libcairo2-dev libx11-dev libxpm-dev libxt-dev python-dev python3-dev ruby-dev lua5.1 liblua5.1-0-dev libperl-dev git
+    sudo apt -y purge vim vim-runtime gvim vim-tiny vim-common vim-gui-common vim-nox
+    cd ~/src
+    if [ ! -d vim]; then
+        git clone https://github.com/vim/vim.git
+    fi
+    if [ -d vim]; then
+        git fullupdate vim
+    fi
+    cd vim
+    make clean distclean
+    ./configure --with-features=huge \
+                --enable-multibyte \
+                --enable-rubyinterp=yes \
+                --with-x \
+                --enable-perlinterp=yes \
+                --enable-luainterp=yes \
+                --enable-gui=gtk2 \
+                --enable-cscope \
+                --prefix=/usr/local \
+                --enable-python3interp=yes \
+                --with-python3-config-dir=$(python3-config --configdir) \
+                --with-python3-command=python3
+
+    cd ~/src/vim/src
+    make VIMRUNTIMEDIR=/usr/local/share/vim/vim82
+    sudo make install
+
+    sudo update-alternatives --install /usr/bin/editor editor /usr/local/bin/vim 1
+    sudo update-alternatives --set editor /usr/local/bin/vim
+    sudo update-alternatives --install /usr/bin/vi vi /usr/local/bin/vim 1
+    sudo update-alternatives --set vi /usr/local/bin/vim
+    cd
+}
+
+#Make a 16x16px ico file
+function favico() {
+    convert -resize x16 -gravity center -crop 16x16+0+0 "%1" -flatten -colors 256 -background transparent favicon.ico 
+}
+
+# smallify vids
+# ffmpeg -i input.avi -c:v libx264 -crf 18 -preset veryslow -c:a copy out.mp4
+
+#Use ffplay (from ffmpeg) to play random MP3s from a directory
+function toonzes() {
+    find . -type f -name "*.mp3" | shuf | while read f; do ffplay -autoexit -- "$f"; done
+}
+
 
