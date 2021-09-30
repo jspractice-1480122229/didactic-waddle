@@ -12,7 +12,7 @@ git clone --depth=1 https://github.com/amix/vimrc.git "${HOME}"/.vim_runtime
 sh "${HOME}"/.vim_runtime/install_awesome_vimrc.sh
 cd "${HOME}"/.vim_runtime
 echo "Setup Vundle for YouCompleteMe"
-git clone https://github.com/VundleVim/Vundle.vim.git ~/.vim/bundle/Vundle.vim #Vundle is for YCM
+git clone https://github.com/VundleVim/Vundle.vim.git "${HOME}"/.vim/bundle/Vundle.vim #Vundle is for YCM
 echo 'set nocompatible
 filetype off
 set rtp+=~/.vim/bundle/Vundle.vim
