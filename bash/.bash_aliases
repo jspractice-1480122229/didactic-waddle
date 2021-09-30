@@ -12,30 +12,24 @@
 # application.  To override the alias instruction use a \ before, ie
 # \rm will call the real rm not the alias.
 #
-# Interactive operation...
-# alias rm='rm -i'
-# alias cp='cp -i'
-# alias mv='mv -i'
-#
 # Verbose output...
 alias rm='rm -v'
 alias cp='cp -v'
 alias mv='mv -v'
 #
 # Default to human readable figures
-alias df='df -h'
+# alias df='df -h'
 # alias du='du -h'
 alias du='du -kh'       # Makes a more readable output.
-#alias df='df -kTh'
+alias df='df -kTh'
 
 #
 # Misc :)
 # alias less='less -r'                          # raw control characters
-# alias whence='type -a'                        # where, of a sort
+alias whence='type -a'                        # where, of a sort
 alias which='type -a'
 alias grep='grep --color'                     # show differences in color
 alias awk='gawk'
-alias hs='history |grep $1'
 # -> Prevents accidentally clobbering files.
 alias mkdir='mkdir -p'
 alias h='history'
@@ -43,7 +37,7 @@ alias j='jobs -l'
 alias ..='cd ..'
 alias path='echo -e ${PATH//:/\\n}'
 alias libpath='echo -e ${LD_LIBRARY_PATH//:/\\n}'
-
+alias rd='rm -frv'
 #-------------------------------------------------------------
 # The 'ls' family (this assumes you use a recent GNU ls)
 #-------------------------------------------------------------
@@ -56,27 +50,39 @@ alias lu='ls -ltur'        # sort by and show access time, most recent last
 alias lt='ls -ltr'         # sort by date, most recent last
 alias lm='ls -al |more'    # pipe through 'more'
 alias lr='ls -lR'          # recursive ls
+alias l='ls -CF'     
 
+alias dir='ls --color=auto --format=vertical'
+alias vdir='ls --color=auto --format=long'
 # alias egrep='egrep --color=auto'              # show differences in color
 # alias fgrep='fgrep --color=auto'              # show differences in color
 #
 # Some shortcuts for different directory listings
-alias ls='ls -aghlAFGH --color=tty --group-directories-first'                 # classify files in color
-# alias dir='ls --color=auto --format=vertical'
-# alias vdir='ls --color=auto --format=long'
-# alias ll='ls -l'                              # long list
-# alias la='ls -A'                              # all but . and ..
-# alias l='ls -CF'                              #
+# enable color support of ls and also add handy aliases
+if [ -x /usr/bin/dircolors ]; then
+    if test -r ~/.dircolors
+    then
+        eval "$(dircolors -b ~/.dircolors)"
+    else
+        eval "$(dircolors -b)"
+    fi
+    alias ls='ls -aghlAFGH --color=tty --group-directories-first'                 # classify files in color
+fi
+
+alias diff='colordiff -s'
 alias cls='clear'
-alias rd='rm -frv'
+alias psall='ps -ejH'
+alias cpdir='cp -frv'
 alias cd='cd_func'
-alias diff='diff -s'
-alias me='cd /cygdrive/c/Users/gerry.araujo'
-alias cygports='apt-ports mirror ftp://ftp.cygwinports.org/pub/cygwinports/'
-alias cygreg='apt-ports mirror http://cygwin.cathedral-networks.org//x86_64/release'
-alias open='cygstart --showmaximized $1'
+alias vpn='/opt/cisco/anyconnect/bin/vpn'
+alias vpnui='/opt/cisco/anyconnect/bin/vpnui'
+alias chmod='chmod -c'
 alias vi='vim'
-alias fortune='fortune -s -n 125'
+alias fortuna='\fortune'
+alias fortune='fortune -a -s -n 125'
 alias randumb='echo $RANDOM'
 alias purtyjson='python -m json.tool'
-alias olywoconn='cd //am-dev-web01/Projects/Deployment/ClientWebsites/Oly-WO-connector'
+alias moo='fortune -c | cowthink -f $(find /usr/share/cowsay/cows -type f | shuf -n 1)'
+# alias tidy='tidy -im --ncr yes --numeric-entities yes -w 120'
+alias dia='date +%s'
+alias tstamp='date +%Y-%m-%dT%T%:z'
