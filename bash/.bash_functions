@@ -331,7 +331,7 @@ gimme()
 {
     sudo apt update
     sudo apt -y install "$1"
-    sudo apt clean
+    sudo apt-get clean
 }
 
 #reinstall this app!!!
@@ -339,7 +339,7 @@ tryagain()
 {
     sudo apt update
     sudo apt -y reinstall "$1"
-    sudo apt clean
+    sudo apt-get clean
 }
 
 #completely purge this app!!!
@@ -347,7 +347,7 @@ nuke()
 {
     sudo apt -y purge "$1"
     sudo apt -y autoremove
-    sudo apt clean
+    sudo apt-get clean
 }
 
 #upgrade system
@@ -357,7 +357,7 @@ iago()
     sudo apt -y autoremove
     sudo apt -y full-upgrade
     sudo apt -y autoremove
-    sudo apt clean
+    sudo apt-get clean
 }
 
 # Make n-dupes of a file
@@ -615,14 +615,16 @@ function freshenvim()
 {
     sudo apt -y install libncurses5-dev libgtk2.0-dev libatk1.0-dev libcairo2-dev libx11-dev libxpm-dev libxt-dev python-dev python3-dev ruby-dev lua5.1 liblua5.1-0-dev libperl-dev git
     sudo apt -y purge vim vim-runtime gvim vim-tiny vim-common vim-gui-common vim-nox
-    cd ~/src
-    if [ ! -d vim]; then
-        git clone https://github.com/vim/vim.git
-    fi
-    if [ -d vim]; then
-        git fullupdate vim
-    fi
-    cd vim
+    sudo apt -y autoremove;
+    VIM_SOURCE="${HOME}"/src/vim
+    if [[ -d "$VIM_SOURCE" ]]; then
+        cd_func "$VIM_SOURCE";
+	    git remote update -p; git merge --ff-only @{u};
+	    git submodule update --init --recursive;
+    else
+        git clone https://github.com/vim/vim.git "${HOME}"/src/vim
+    fi;
+    cd_func "$VIM_SOURCE"
     make clean distclean
     ./configure --with-features=huge \
                 --enable-multibyte \
@@ -634,7 +636,7 @@ function freshenvim()
                 --enable-cscope \
                 --prefix=/usr/local \
                 --enable-python3interp=yes \
-                --with-python3-config-dir=$(python3-config --configdir) \
+                --with-python3-config-dir="$(python3-config --configdir)" \
                 --with-python3-command=python3
 
     cd ~/src/vim/src
@@ -646,6 +648,11 @@ function freshenvim()
     sudo update-alternatives --install /usr/bin/vi vi /usr/local/bin/vim 1
     sudo update-alternatives --set vi /usr/local/bin/vim
     cd
+}
+
+#pre-reqs for YouCompleteMe
+function prep4YCM() {
+    sudo apt -y install build-essential cmake mono-complete golang nodejs default-jdk npm shellcheck
 }
 
 #Make a 16x16px ico file
@@ -662,3 +669,11 @@ function toonzes() {
 }
 
 
+#!/bin/bash
+function wav2mp3() {
+    for x in *.wav; do ffmpeg -i "$x" -vn -ar 44100 -ac 2 -b:a 192k "`basename "$x" .wav`.mp3"; done
+}
+#!/bin/bash
+function ogg2mp3() {
+    for x in *.ogg; do ffmpeg -i "$x" "`basename "$x" .ogg`.mp3"; done
+}
