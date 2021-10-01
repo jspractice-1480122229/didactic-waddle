@@ -414,13 +414,13 @@ Usage: fstr [-i] \"pattern\" [\"filename pattern\"] "
         *) echo "$usage"; return;;
         esac
     done
-    shift $(( $OPTIND - 1 ))
+    shift $(( OPTIND - 1 ))
     if [ "$#" -lt 1 ]; then
         echo "$usage"
         return;
     fi
     find . -type f -name "${2:-*}" -print0 | \
-    xargs -0 egrep --color=always -sn ${case} "$1" 2>&- | more
+    xargs -0 egrep --color=always -sn "${case} $1" 2>&- | more
 }
 
 # Find a pattern in a set of files BUT WITHOUT highlighting them:
@@ -438,20 +438,20 @@ Usage: ncfstr [-i] \"pattern\" [\"filename pattern\"] "
         *) echo "$usage"; return;;
         esac
     done
-    shift $(( $OPTIND - 1 ))
+    shift $(( OPTIND - 1 ))
     if [ "$#" -lt 1 ]; then
         echo "$usage"
         return;
     fi
     find . -type f -name "${2:-*}" -print0 | \
-    xargs -0 egrep --color=never -sn ${case} "$1" 2>&- | more
+    xargs -0 egrep --color=never -sn "${case} $1" 2>&- | more
 }
 
 #cut last n lines in file, 20 by default
 function cuttail()
 {
     nlines=${2:-20}
-    sed -n -e :a -e "1,${nlines}!{P;N;D;};N;ba" $1
+    sed -n -e :a -e "1,${nlines}!{P;N;D;};N;ba $1"
 }
 
 # move filenames to lowercase
@@ -548,7 +548,7 @@ cd_func ()
      adir=$(dirs +$index)
      if [[ -z "$adir" ]]; then
          if [[ "$SHELL" == "/bin/zsh" ]]; then
-             cd ~${index}
+             cd ~${index} || exit;
              return 0
              else
                 echo "ADIR is null. Terminating." && return 1
@@ -563,7 +563,7 @@ cd_func ()
  
    #
    # Now change to the new dir and add to the top of the stack
-   pushd "${the_new_dir}" > /dev/null
+   pushd "${the_new_dir}" > /dev/null || exit;
    [[ $? -ne 0 ]] && return 1
    the_new_dir=$(pwd)
    
@@ -578,7 +578,7 @@ cd_func ()
      [[ ${x2:0:1} == '~' ]] && x2="${HOME}${x2:1}"
      if [[ "${x2}" == "${the_new_dir}" ]]; then
        popd -n +$cnt 2>/dev/null 1>/dev/null
-       cnt=cnt-1
+       cnt=$((cnt-1))
      fi
    done
  
@@ -589,13 +589,13 @@ cd_func ()
 function wz()
 {
     rd "${HOME}"/src/warzone2100/ 
-    cd "${HOME}"/src/ 
+    cd "${HOME}"/src/ || return;
     git clone --recurse-submodules --depth 1 https://github.com/Warzone2100/warzone2100 
     mkdir warzone2100/build
-    cd warzone2100/build
+    cd warzone2100/build || return;
     cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX:PATH=/opt/warzone2100-latest -GNinja ..
     sudo cmake --build . --target install 
-    cd
+    cd || exit;
 }
 
 #what desktop am I running?
@@ -607,7 +607,7 @@ function wutdt()
 #Get PID to kill, from top
 function gettoppid()
 {
-    top -p $(pgrep -d , "$1")
+    top -p "$(pgrep -d , "$1")"
 }
 
 #Get/Update vim
@@ -619,7 +619,7 @@ function freshenvim()
     VIM_SOURCE="${HOME}"/src/vim
     if [[ -d "$VIM_SOURCE" ]]; then
         cd_func "$VIM_SOURCE";
-	    git remote update -p; git merge --ff-only @{u};
+	    git remote update -p; git merge --ff-only @\{u\};
 	    git submodule update --init --recursive;
     else
         git clone https://github.com/vim/vim.git "${HOME}"/src/vim
@@ -639,7 +639,7 @@ function freshenvim()
                 --with-python3-config-dir="$(python3-config --configdir)" \
                 --with-python3-command=python3
 
-    cd ~/src/vim/src
+    cd ~/src/vim/src || return;
     make VIMRUNTIMEDIR=/usr/local/share/vim/vim82
     sudo make install
 
@@ -647,12 +647,22 @@ function freshenvim()
     sudo update-alternatives --set editor /usr/local/bin/vim
     sudo update-alternatives --install /usr/bin/vi vi /usr/local/bin/vim 1
     sudo update-alternatives --set vi /usr/local/bin/vim
-    cd
+    cd || exit
 }
 
 #pre-reqs for YouCompleteMe
 function prep4YCM() {
     sudo apt -y install build-essential cmake mono-complete golang nodejs default-jdk npm shellcheck
+    YCM_SOURCE="${HOME}"/.vim/bundle/YouCompleteMe
+    if [[ -d "$YCM_SOURCE" ]]; then
+        vim +PluginUpdate +qall;
+	    cd "$YCM_SOURCE" || return;
+	    python3 install.py --all
+    else
+        vim +PluginInstall +qall;
+	    cd "$YCM_SOURCE" || return;
+	    python3 install.py --all
+fi
 }
 
 #Make a 16x16px ico file
@@ -665,15 +675,15 @@ function favico() {
 
 #Use ffplay (from ffmpeg) to play random MP3s from a directory
 function toonzes() {
-    find . -type f -name "*.mp3" | shuf | while read f; do ffplay -autoexit -- "$f"; done
+    find . -type f -name "*.mp3" | shuf | while read -r f; do ffplay -autoexit -- "$f"; done
 }
 
 
 #!/bin/bash
 function wav2mp3() {
-    for x in *.wav; do ffmpeg -i "$x" -vn -ar 44100 -ac 2 -b:a 192k "`basename "$x" .wav`.mp3"; done
+    for x in *.wav; do ffmpeg -i "$x" -vn -ar 44100 -ac 2 -b:a 192k "$(basename "$x" .wav).mp3"; done
 }
 #!/bin/bash
 function ogg2mp3() {
-    for x in *.ogg; do ffmpeg -i "$x" "`basename "$x" .ogg`.mp3"; done
+    for x in *.ogg; do ffmpeg -i "$x" "$(basename "$x" .ogg).mp3"; done
 }
