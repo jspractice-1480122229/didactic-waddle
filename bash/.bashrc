@@ -170,7 +170,6 @@ echo $PATH | grep -Eq "(^|:)/usr/sbin(:|)" || PATH=$PATH:/usr/sbin
 #export GOROOT=/usr/local/go
 #export PATH=$PATH:/usr/local/go/bin:$GOROOT/bin
 
-export PULSE_SERVER=tcp:192.168.4.103
+#export PULSE_SERVER=tcp:192.168.4.103
 # Push to Xming graphic server
-export DISPLAY=192.168.4.103:0.0
-
+#export DISPLAY=192.168.4.103:0.0
