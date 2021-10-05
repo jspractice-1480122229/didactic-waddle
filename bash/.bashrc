@@ -163,13 +163,6 @@ echo $PATH | grep -Eq "(^|:)/usr/sbin(:|)" || PATH=$PATH:/usr/sbin
 #source ~/src/.bash-git-prompt/gitprompt.sh
 #export PATH="${HOME}/.cabal/bin:${PATH}"
 
-###Add GoLang to PATH
-#export GOPATH="$HOME/go_projects"
-#export GOBIN="$GOPATH/bin"
-#export GOROOT=$HOME/go:
-#export GOROOT=/usr/local/go
-#export PATH=$PATH:/usr/local/go/bin:$GOROOT/bin
-
 #export PULSE_SERVER=tcp:192.168.4.103
 # Push to Xming graphic server
 #export DISPLAY=192.168.4.103:0.0
