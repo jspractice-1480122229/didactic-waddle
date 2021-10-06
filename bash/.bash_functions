@@ -652,16 +652,16 @@ function freshenvim()
 
 #pre-reqs for YouCompleteMe
 function prep4YCM() {
-    sudo apt -y install build-essential cmake mono-complete golang nodejs default-jdk npm shellcheck
+    sudo apt -y install build-essential cmake mono-complete nodejs default-jdk npm shellcheck
     YCM_SOURCE="${HOME}"/.vim/bundle/YouCompleteMe
     if [[ -d "$YCM_SOURCE" ]]; then
         vim +PluginUpdate +qall;
 	    cd "$YCM_SOURCE" || return;
-	    python3 install.py --all
+	    python3 install.py --js-completer --ts-completer --cs-completer --clangd-completer --java-completer --rust-completer 
     else
         vim +PluginInstall +qall;
 	    cd "$YCM_SOURCE" || return;
-	    python3 install.py --all
+	    python3 install.py --js-completer --ts-completer --cs-completer --clangd-completer --java-completer --rust-completer 
 fi
 }
 
