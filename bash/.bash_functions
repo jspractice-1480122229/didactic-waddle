@@ -345,8 +345,8 @@ tryagain()
 #completely purge this app!!!
 nuke()
 {
-    sudo apt -y purge "$1"
-    sudo apt -y autoremove
+    sudo apt -y purge --auto-remove "$1"
+    sudo apt -y autoremove --purge
     sudo apt-get clean
 }
 
@@ -354,9 +354,9 @@ nuke()
 iago()
 {
     sudo apt update
-    sudo apt -y autoremove
+    sudo apt -y autoremove --purge
     sudo apt -y full-upgrade
-    sudo apt -y autoremove
+    sudo apt -y autoremove --purge
     sudo apt-get clean
 }
 
