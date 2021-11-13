@@ -1,43 +1,43 @@
 # This is Git's per-user configuration file.
 [user]
 # Please adapt and uncomment the following lines:
-	name = jspractice-1480122229
-	email = jspractice-1480122229@
+name = jspractice-1480122229
+email = jspractice-1480122229@
 [core]
-	excludesfile = ~/.gitignore_global.txt
+excludesfile = ~/.gitignore_global.txt
 [alias]
-	hfd-up = "!f() { cd $1 && git checkout hotfix && git up && git submodule update --init --recursive; }; f"
-	feats-up = "!f() { cd $1 && git checkout feature && git up && git submodule update --init --recursive; }; f"
-	prod-plug = "!f() { cd $1 && git checkout production && git up && git submodule update --init --recursive; }; f"
-	up-sub = "!f() { cd $1 && git submodule update --init --recursive; }; f"
-	fu = "!f() { cd $1 && git up && git submodule update --init --recursive; }; f"
-	rel-up = "!f() { cd $1 && git checkout release && git up && git submodule update --init --recursive; }; f"
-	gityup = "!f() { cd $1 && git checkout $2 && git up && git submodule update --init --recursive; }; f"
-	master = "!f() { cd $1 && git checkout master && git up && git submodule update --init --recursive; }; f"
-	co = checkout
-	br = branch
-	cm = commit
-	st = status
-	history = log --graph --pretty=oneline --abbrev-commit
-	today = log --graph --oneline --since="12am"
-	up = "!git remote update -p; git merge --ff-only @{u}"
+hfd-up = "!f() { cd $1 && git checkout hotfix && git up && git submodule update --init --recursive; }; f"
+feats-up = "!f() { cd $1 && git checkout feature && git up && git submodule update --init --recursive; }; f"
+prod-plug = "!f() { cd $1 && git checkout production && git up && git submodule update --init --recursive; }; f"
+up-sub = "!f() { cd $1 && git submodule update --init --recursive; }; f"
+fu = "!f() { cd $1 && git up && git submodule update --init --recursive; }; f"
+rel-up = "!f() { cd $1 && git checkout release && git up && git submodule update --init --recursive; }; f"
+gityup = "!f() { cd $1 && git checkout $2 && git up && git submodule update --init --recursive; }; f"
+master = "!f() { cd $1 && git checkout master && git up && git submodule update --init --recursive; }; f"
+co = checkout
+br = branch
+cm = commit
+st = status
+history = log --graph --pretty=oneline --abbrev-commit
+today = log --graph --oneline --since="12am"
+up = "!git remote update -p; git merge --ff-only @{u}"
 [credential]
-	helper = store
+helper = store
 [push]
-	default = simple
+default = simple
 [color]
-	ui = auto
+ui = auto
 [color "branch"]
-	current = yellow bold
-	local = green bold
-	remote = cyan bold
+current = yellow bold
+local = green bold
+remote = cyan bold
 [color "diff"]
-	meta = yellow bold
-	frag = magenta bold
-	old = red bold
-	new = green bold
-	whitespace = red reverse
+meta = yellow bold
+frag = magenta bold
+old = red bold
+new = green bold
+whitespace = red reverse
 [color "status"]
-	added = green bold
-	changed = yellow bold
-	untracked = red bold
+added = green bold
+changed = yellow bold
+untracked = red bold
