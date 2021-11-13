@@ -325,7 +325,7 @@ iago() {
     echo "==> remove cruft" && sudo apt -y autoremove
     echo "===> get all the stuffs" && sudo apt -y full-upgrade
     echo "====> remove newly created cruft" && sudo apt -y autoremove --purge
-    echo "> cleaning out old packages! <" && sudo apt-get clean
+    echo "> old packages cleaned! <" && sudo apt-get clean
 }
 
 # Make n-dupes of a file
