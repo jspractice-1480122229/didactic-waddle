@@ -2,7 +2,7 @@
 ## bootstrap for new nodes with BASH
 echo "My bootstrap begins..."
 sudo apt update
-sudo apt install -y curl wget git tree colordiff net-tools
+sudo apt install -y curl wget git tree colordiff net-tools aptitude
 mv -fv "${HOME}"/.bashrc dotbashrc
 wget https://raw.githubusercontent.com/jspractice-1480122229/didactic-waddle/master/bash/.bashrc
 wget https://raw.githubusercontent.com/jspractice-1480122229/didactic-waddle/master/bash/.bash_aliases
