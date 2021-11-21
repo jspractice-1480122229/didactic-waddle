@@ -2,12 +2,13 @@
 ## bootstrap for new nodes with BASH
 echo "My bootstrap begins..."
 sudo apt update
-sudo apt install -y curl wget git tree colordiff net-tools aptitude
+sudo apt install -y wget git cmake tree colordiff net-tools aptitude
 mv -fv "${HOME}"/.bashrc dotbashrc
 wget https://raw.githubusercontent.com/jspractice-1480122229/didactic-waddle/master/bash/.bashrc
 wget https://raw.githubusercontent.com/jspractice-1480122229/didactic-waddle/master/bash/.bash_aliases
 wget https://raw.githubusercontent.com/jspractice-1480122229/didactic-waddle/master/bash/.bash_functions
-wget https://raw.githubusercontent.com/padosoft/gitignore/master/gitignore_global.txt -O "${HOME}"/.gitignore_global.txt
+curl -o "${HOME}"/.gitignore_global.txt https://raw.githubusercontent.com/padosoft/gitignore/master/gitignore_global.txt
+#wget https://raw.githubusercontent.com/padosoft/gitignore/master/gitignore_global.txt -O "${HOME}"/.gitignore_global.txt
 curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
 sudo apt update && sudo apt upgrade -y && sudo apt -y autoremove --purge
 git clone --depth=1 https://github.com/amix/vimrc.git "${HOME}"/.vim_runtime

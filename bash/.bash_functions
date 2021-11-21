@@ -621,7 +621,8 @@ function freshenvim() {
 
 #pre-reqs for YouCompleteMe
 function prep4YCM() {
-    sudo apt -y install build-essential cmake mono-complete nodejs default-jdk npm shellcheck
+    sudo apt -y install build-essential cmake mono-complete nodejs default-jdk shellcheck
+    sudo npm install -g npm@latest
     YCM_SOURCE="${HOME}"/.vim/bundle/YouCompleteMe
     if [[ -d "$YCM_SOURCE" ]]; then
         vim +PluginUpdate +qall
