@@ -7,6 +7,9 @@ mv -fv "${HOME}"/.bashrc dotbashrc
 wget https://raw.githubusercontent.com/jspractice-1480122229/didactic-waddle/master/bash/.bashrc
 wget https://raw.githubusercontent.com/jspractice-1480122229/didactic-waddle/master/bash/.bash_aliases
 wget https://raw.githubusercontent.com/jspractice-1480122229/didactic-waddle/master/bash/.bash_functions
+wget https://raw.githubusercontent.com/jspractice-1480122229/didactic-waddle/master/bash/.gitconfig
+wget https://raw.githubusercontent.com/jspractice-1480122229/didactic-waddle/master/bash/.git-credentials
+wget https://raw.githubusercontent.com/jspractice-1480122229/didactic-waddle/master/bash/symbols.txt
 curl -o "${HOME}"/.gitignore_global.txt https://raw.githubusercontent.com/padosoft/gitignore/master/gitignore_global.txt
 #wget https://raw.githubusercontent.com/padosoft/gitignore/master/gitignore_global.txt -O "${HOME}"/.gitignore_global.txt
 ## MANUAL INSTALL OF nodejs, per https://github.com/nodesource/distributions/blob/master/README.md#debmanual
