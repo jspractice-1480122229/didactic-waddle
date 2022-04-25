@@ -16,10 +16,10 @@ function ripytsong() {
 
 #download best quality yt clip
 dlbestytclip() {
-    youtube-dl -F --no-check-certificate "$1" | grep \)$ | gawk -F\  '{print $1}' >0.tmp
+    youtube-dl --no-check-certificate -F "$1" | grep \)$ | gawk -F\  '{print $1}' >0.tmp
     best=$(<0.tmp)
     ##\rm 0.tmp
-    youtube-dl -f --no-check-certificate "$best" "$1"
+    youtube-dl --no-check-certificate -f "$best" "$1"
 }
 
 #make MP3 files louder with Lame
