@@ -581,7 +581,7 @@ function gettoppid() {
 
 #Get/Update vim
 function freshenvim() {
-    sudo apt -y install libncurses5-dev libgtk2.0-dev libatk1.0-dev libcairo2-dev libx11-dev libxpm-dev libxt-dev python-dev python3-dev ruby-dev lua5.1 liblua5.1-0-dev libperl-dev git
+    sudo apt -y install libncurses5-dev libgtk2.0-dev libatk1.0-dev libcairo2-dev libx11-dev libxpm-dev libxt-dev python3-dev ruby-dev lua5.1 liblua5.1-0-dev libperl-dev git
     sudo apt -y purge vim vim-runtime gvim vim-tiny vim-common vim-gui-common vim-nox
     sudo apt -y autoremove
     VIM_SOURCE="${HOME}"/src/vim
@@ -609,7 +609,7 @@ function freshenvim() {
         --with-python3-command=python3
 
     cd ~/src/vim/src || return
-    make VIMRUNTIMEDIR=/usr/local/share/vim/vim82
+    make VIMRUNTIMEDIR=/usr/local/share/vim/vim91
     sudo make install
 
     sudo update-alternatives --install /usr/bin/editor editor /usr/local/bin/vim 1
@@ -621,8 +621,8 @@ function freshenvim() {
 
 #pre-reqs for YouCompleteMe
 function prep4YCM() {
-    sudo apt -y install build-essential cmake mono-complete nodejs default-jdk shellcheck
-    sudo npm install -g npm@latest
+    sudo apt -y install build-essential cmake mono-complete openjdk-17-jdk shellcheck golang
+    npm install -g npm@latest
     YCM_SOURCE="${HOME}"/.vim/bundle/YouCompleteMe
     if [[ -d "$YCM_SOURCE" ]]; then
         vim +PluginUpdate +qall
