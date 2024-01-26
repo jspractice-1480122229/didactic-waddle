@@ -13,15 +13,9 @@ wget https://raw.githubusercontent.com/jspractice-1480122229/didactic-waddle/mas
 curl -o "${HOME}"/.gitignore_global.txt https://raw.githubusercontent.com/padosoft/gitignore/master/gitignore_global.txt
 #wget https://raw.githubusercontent.com/padosoft/gitignore/master/gitignore_global.txt -O "${HOME}"/.gitignore_global.txt
 ## MANUAL INSTALL OF nodejs, per https://github.com/nodesource/distributions/blob/master/README.md#debmanual
-KEYRING=/usr/share/keyrings/nodesource.gpg
-curl -fsSL https://deb.nodesource.com/gpgkey/nodesource.gpg.key | gpg --dearmor | sudo tee "$KEYRING" >/dev/null
-# wget can also be used:
-# wget --quiet -O - https://deb.nodesource.com/gpgkey/nodesource.gpg.key | gpg --dearmor | sudo tee "$KEYRING" >/dev/null
-gpg --no-default-keyring --keyring "$KEYRING" --list-keys
-VERSION=node_16.x
-DISTRO="$(lsb_release -s -c)"
-echo "deb [signed-by=$KEYRING] https://deb.nodesource.com/$VERSION $DISTRO main" | sudo tee /etc/apt/sources.list.d/nodesource.list
-echo "deb-src [signed-by=$KEYRING] https://deb.nodesource.com/$VERSION $DISTRO main" | sudo tee -a /etc/apt/sources.list.d/nodesource.list
+#Use fnm from https://github.com/Schniz/fnm
+curl -fsSL https://fnm.vercel.app/install | bash
+fnm install v20.11.0
 sudo apt update && sudo apt upgrade -y && sudo apt -y autoremove --purge
 git clone --depth=1 https://github.com/amix/vimrc.git "${HOME}"/.vim_runtime
 sh "${HOME}"/.vim_runtime/install_awesome_vimrc.sh
