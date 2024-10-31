@@ -17,7 +17,8 @@ email = jspractice-1480122229
 	today = log --graph --oneline --since="12am"
 	up = "!git remote update -p; git merge --ff-only @{u}"
 [credential]
-	helper = store
+	helper = 
+	helper = /usr/local/bin/git-credential-manager
 [push]
 	default = simple
 [color]
@@ -39,3 +40,5 @@ email = jspractice-1480122229
 	added = green bold
 	changed = yellow bold
 	untracked = red bold
+[credential "https://dev.azure.com"]
+	useHttpPath = true

@@ -8,24 +8,42 @@ case $- in
       *) return;;
 esac
 
-# don't put duplicate lines or lines starting with space in the history.
-# See bash(1) for more options
-HISTCONTROL=ignoreboth
-
-# append to the history file, don't overwrite it
-shopt -s histappend
-
-# for setting history length see HISTSIZE and HISTFILESIZE in bash(1)
-HISTSIZE=1000
-HISTFILESIZE=2000
-
+# Completion options
+###################
+# These completion tuning parameters change the default behavior of bash_completion:
+#
 # check the window size after each command and, if necessary,
 # update the values of LINES and COLUMNS.
 shopt -s checkwinsize
 
+# Use case-insensitive filename globbing
+shopt -s nocaseglob nocasematch
+
 # If set, the pattern "**" used in a pathname expansion context will
 # match all files and zero or more directories and subdirectories.
-#shopt -s globstar
+shopt -s globstar
+# History Options
+################
+# don't put duplicate lines or lines starting with space in the history.
+# See bash(1) for more options
+export HISTCONTROL=$HISTCONTROL${HISTCONTROL+,}ignoreboth
+#
+# Ignore some controlling instructions
+# HISTIGNORE is a colon-delimited list of patterns which should be excluded.
+# The '&' is a special pattern which suppresses duplicate entries.
+# export HISTIGNORE=$'[ \t]*:&:[fb]g:exit'
+export HISTIGNORE=$'[ \t]*:&:[fb]g:exit:ls:cd' # Ignore the ls command as well
+
+# Make bash append rather than overwrite the history on disk
+shopt -s histappend
+
+# When changing directory small typos can be ignored by bash
+# for example, cd /vr/lgo/apaache would find /var/log/apache
+shopt -s cdspell
+
+# for setting history length see HISTSIZE and HISTFILESIZE in bash(1)
+HISTSIZE=-1
+HISTFILESIZE=-1
 
 # make less more friendly for non-text input files, see lesspipe(1)
 #[ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"
@@ -150,8 +168,11 @@ xterm*|rxvt*)
 esac
 
 # Add sbin directories to PATH.  This is useful on systems that have sudo
-echo $PATH | grep -Eq "(^|:)/sbin(:|)"     || PATH=$PATH:/sbin
-echo $PATH | grep -Eq "(^|:)/usr/sbin(:|)" || PATH=$PATH:/usr/sbin
+echo "$PATH" | grep -Eq "(^|:)/sbin(:|)"     || PATH=$PATH:/sbin
+echo "$PATH" | grep -Eq "(^|:)/usr/sbin(:|)" || PATH=$PATH:/usr/sbin
+
+# Add binnie directories to PATH.  This is useful for adding custom functions on systems that should only impact the individual user.
+echo "$PATH" | grep -Eq "(^|:)/${HOME}/binnie(:|)"     || PATH=$PATH:/${HOME}/binnie
 
 #bash-git-prompt
 #export GIT_PROMPT_ONLY_IN_REPO=1 # Use the default prompt when not in a git repo.
@@ -166,3 +187,8 @@ echo $PATH | grep -Eq "(^|:)/usr/sbin(:|)" || PATH=$PATH:/usr/sbin
 #export PULSE_SERVER=tcp:192.168.4.103
 # Push to Xming graphic server
 #export DISPLAY=192.168.4.103:0.0
+
+# Add personal bin dir 'binnie'
+#export PATH="${HOME}/binnie:${PATH}"
+
+screenfetch
