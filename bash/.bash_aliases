@@ -69,6 +69,9 @@ if [ -x /usr/bin/dircolors ]; then
     alias ls='ls -aghlAFGH --color=tty --group-directories-first'                 # classify files in color
 fi
 
+#-------------
+# Other stuff
+#-------------
 alias diff='colordiff -s'
 alias cls='clear'
 alias psall='ps -ejH'
