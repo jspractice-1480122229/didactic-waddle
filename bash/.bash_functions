@@ -11,15 +11,12 @@
 
 #rip from youtube
 function ripytsong() {
-    youtube-dl --write-all-thumbnails --prefer-ffmpeg -x --audio-format mp3 --audio-quality 5 "$1"
+    yt-dlp --write-thumbnail --prefer-ffmpeg -x --audio-format mp3 --audio-quality 5 "$1"
 }
 
 #download best quality yt clip
-dlbestytclip() {
-    youtube-dl --no-check-certificate -F "$1" | grep \)$ | gawk -F\  '{print $1}' >0.tmp
-    best=$(<0.tmp)
-    ##\rm 0.tmp
-    youtube-dl --no-check-certificate -f "$best" "$1"
+bestytclip() {
+    yt-dlp -f best "$1"
 }
 
 #make MP3 files louder with Lame
@@ -66,21 +63,22 @@ function flacto256kmp3() {
     fi
 }
 
-#convert *nix epoch time to regular
+#change *nix epoch time to regular
 function epoch() {
     date --date=@"$1"
 }
 
-# shrinky PDFy
+# shrinky PDF
 teenypdf() {
     gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dNOPAUSE -dBATCH -dQUIET -sOutputFile="$2" "$1"
 }
 
-# knocking other users off the system, for work
-function bumpothers() {
-    sudo pkill -KILL -u steby
-    sudo pkill -KILL -u jeny
-    sudo pkill -KILL -u pia
+# trim spaces and blank lines from file
+function noblanks() {
+    ets=$(date +%s)
+    perl -nlwe 'tr/ //d; print if length' "$1" > junk-"$ets".tmp
+    swap "$1" junk-"$ets".tmp
+    rm -fv junk-"$ets".tmp
 }
 
 #****************************************#
@@ -116,7 +114,7 @@ function mp42webm() {
     ffmpeg -i "${FILE}" -f webm -c:v libvpx -b:v 1M -acodec libvorbis -y "${FILE%.mp4}.webm"
 }
 
-#Converty .mkv to mp3
+#Convert .mkv to mp3
 function mkv2mp3() {
     find . -type f -name "*.mkv" -exec bash -c 'FILE="$1"; ffmpeg -i "${FILE}" -vn -c:a libmp3lame -y "${FILE%.mkv}.mp3";' _ '{}' \;
 }
@@ -135,25 +133,25 @@ function ponies() {
 #Convert .webm to 192k bitrate .mp3 files
 function webm2mp3() {
     OUTPUT_DIR=mp3version
-    if [ ! -d $OUTPUT_DIR ]; then
-        mkdir $OUTPUT_DIR
+    if [ ! -d "$OUTPUT_DIR" ]; then
+        mkdir "$OUTPUT_DIR"
     fi
     for FILE in *.webm; do
-        #            filename=$(basename "$FILE")
-        #            extension="${filename##*.}"
-        #            filename="${filename%.*}"
-        echo -e "Processing video '\e[32m$FILE\e[0m'"
-        ffmpeg -n -i "${FILE}" -metadata encoded_by="Processed by Zeranoe FFmpeg builds for Windows, ffmpeg-v.N-82759-g1f5630a" -f mp3 -acodec libmp3lame -ab 192k -ar 44100 -id3v2_version 3 -write_id3v1 1 -vsync 2 $OUTPUT_DIR/"${FILE%.webm}.mp3"
+#            filename=$(basename "$FILE")
+#            extension="${filename##*.}"
+#            filename="${filename%.*}"
+        echo -e "Processing video '\\e[32m$FILE\\e[0m'";
+        ffmpeg -n -i "${FILE}" -metadata encoded_by="https://www.ffmpeg.org/" -f mp3 -acodec libmp3lame -ab 192k -ar 44100 -id3v2_version 3 -write_id3v1 1 -vsync 2 "$OUTPUT_DIR/${FILE%.webm}.mp3"
     done
 }
 #Convert .aiff to 192k bitrate .mp3 files
 function aiff2mp3() {
-    OUTPUT_DIR=mp3version
-    if [ ! -d $OUTPUT_DIR ]; then
-        mkdir $OUTPUT_DIR
-    fi
-    for i in *.aiff; do
-        ffmpeg -n -i "$i" -metadata encoded_by="Processed by Zeranoe FFmpeg builds for Windows, ffmpeg-v.N-82759-g1f5630a" -f mp3 -acodec libmp3lame -ab 192k -ar 44100 -id3v2_version 3 -write_id3v1 1 -vsync 2 $OUTPUT_DIR/"${i%.aiff}.mp3"
+   OUTPUT_DIR=mp3version
+   if [ ! -d "$OUTPUT_DIR" ]; then
+      mkdir "$OUTPUT_DIR"
+   fi
+for i in *.aiff
+    do ffmpeg -n -i "$i" -metadata encoded_by="https://www.ffmpeg.org/" -f mp3 -acodec libmp3lame -ab 192k -ar 44100 -id3v2_version 3 -write_id3v1 1 -vsync 2 "$OUTPUT_DIR/${i%.aiff}.mp3"
     done
 }
 
@@ -161,6 +159,12 @@ function aiff2mp3() {
 function dummyfile() {
     dd if=/dev/zero of="$1" bs="$2" count=1
     randumb | cat >>"$1"
+}
+
+#Different way to make randomdata, dummy files
+function plugdummy()
+{
+    head -c "$1" </dev/urandom > "$2"
 }
 
 #history search
@@ -173,6 +177,20 @@ function guidmaker() {
         uuidgen -r | awk '{print toupper($0)}'
         (("a-=1"))
     done
+}
+
+#3 digit random integer
+function 3digit()
+{
+    FLOOR=100
+    CEILING=1000
+    threedigit=0
+    while [[ $threedigit -le $FLOOR ]] || [[ $threedigit -ge $CEILING ]]
+        do
+            threedigit="$RANDOM"
+        done
+    echo "$threedigit"
+    echo
 }
 
 #5 digit random integer
@@ -192,32 +210,59 @@ function shrinkMP3() {
     if [ ! -d $OUTPUT_DIR ]; then
         mkdir $OUTPUT_DIR
     fi
-    for i in *.mp3; do
-        ffmpeg -n -i "$i" -metadata genre="Podcast" -metadata encoded_by="Processed by Zeranoe FFmpeg builds for Windows, ffmpeg-v.N-79107-g30d1213" -ac 1 -ab 40k -ar 22050 -id3v2_version 3 -write_id3v1 1 -vsync 2 "$OUTPUT_DIR"/"$i"
+for i in *.mp3
+    do ffmpeg -n -i "$i" -metadata genre="Podcast" -metadata encoded_by="https://www.ffmpeg.org/" -ac 1 -ab 40k -ar 22050 -id3v2_version 3 -write_id3v1 1 -vsync 2 "$OUTPUT_DIR/$i"
     done
 }
 
-# Make 898 max width still
-function maxwidth898() {
-    for file in *.jpg; do
-        # next line checks the mime-type of the file
-        IMAGE_TYPE=$(file --mime-type -b "$file" | awk -F'/' '{print $1}')
-        if [ "$IMAGE_TYPE" = "image" ]; then
-            #IMAGE_SIZE=`file -b "$file" | sed 's/ //g' | sed 's/,/ /g' | awk '{print $2}'`
-            WIDTH=$(identify -format "%w" "$file")
-            # If the image width is greater than 898 a still is created
-            if [ "$WIDTH" -ge 899 ]; then
-                #This line converts the image to 898 max width still
-                filename=$(basename "$file")
-                extension="${filename##*.}"
-                filename="${filename%.*}"
-                convert "$file" -resize '898>' -quality 60 "./still_${filename}.${extension}"
-                echo " "
-                echo Processing "$file"...
-                echo "still_${filename}.${extension}" created
-            fi
+# Make a variably define max width still
+function maxwidthvar() {
+  local width=$1
+  for file in *.jpg *.jpeg *.png *.gif *bmp; do
+    # Get the image dimensions
+    OGWIDTH=$(identify -format "%w" "$file")
+    OGHEIGHT=$(identify -format "%h" "$file")
+
+    # If the image width is greater than or equal to the specified width, resize it
+    if [ "$OGWIDTH" -ge "$width" ]; then
+      # Get the file extension
+      extension="${file##*.}"
+      filename="${file%.*}"
+
+      # Resize the image
+      magick "$file" -resize "${width}x>" -quality 60 "./tmp_${filename}.${extension}"
+
+      # Get the new dimensions
+      NUWIDTH=$(identify -format "%w" "tmp_${filename}.${extension}")
+      NUHEIGHT=$(identify -format "%h" "tmp_${filename}.${extension}")
+
+      # Check if the file format is supported for WebP conversion
+      if [ "$extension" = "jpg" ] || [ "$extension" = "jpeg" ] || [ "$extension" = "png" ] || [ "$extension" = "gif" ]; then
+        # Check if the file exists
+        if [ -f "./tmp_${filename}.${extension}" ]; then
+          # Optimize the resized image using cwebp
+          if [ "$extension" = "jpg" ] || [ "$extension" = "jpeg" ]; then
+            cwebp -q 60 -m 6 -mt "./tmp_${filename}.${extension}" -o "./kf_${filename}_${width}x${NUHEIGHT}.webp"
+          elif [ "$extension" = "png" ]; then
+            cwebp -q 60 -m 6 -mt "./tmp_${filename}.${extension}" -o "./kf_${filename}_${width}x${NUHEIGHT}.webp"
+          elif [ "$extension" = "gif" ]; then
+            cwebp -q 60 -m 6 -mt "./tmp_${filename}.${extension}" -o "./kf_${filename}_${width}x${NUHEIGHT}.webp"
+          fi
+
+          # Remove the temporary file
+          rm "./tmp_${filename}.${extension}"
+
+          echo " "
+          echo Processing "$file"...
+          echo "kf_${filename}_${width}x${NUHEIGHT}.webp" created and optimized
+        else
+          echo "Error: File not found."
         fi
-    done
+      else
+        echo "Error: File format not supported for WebP conversion."
+      fi
+    fi
+  done
     # for i in still_*.jpg
     # do
     # jpegoptim --all-progressive -pt --strip-all "$i"
@@ -300,31 +345,31 @@ function jpegthumbs() {
 
 #give me this app!!!
 gimme() {
-    sudo apt update
-    sudo apt -y install "$1"
+    sudo /usr/bin/apt update
+    sudo /usr/bin/apt -y install "$1"
     sudo apt-get clean
 }
 
 #reinstall this app!!!
 tryagain() {
-    sudo apt update
-    sudo apt -y reinstall "$1"
+    sudo /usr/bin/apt update
+    sudo /usr/bin/apt -y reinstall "$1"
     sudo apt-get clean
 }
 
 #completely purge this app!!!
 nuke() {
-    sudo apt -y purge --auto-remove "$1"
-    sudo apt -y autoremove --purge
+    sudo /usr/bin/apt -y purge --auto-remove "$1"
+    sudo /usr/bin/apt -y autoremove --purge
     sudo apt-get clean
 }
 
 #upgrade system
 iago() {
-    echo "=> update repos" && sudo apt update
-    echo "==> remove cruft" && sudo apt -y autoremove
-    echo "===> get all the stuffs" && sudo apt -y full-upgrade
-    echo "====> remove newly created cruft" && sudo apt -y autoremove --purge
+    echo "=> update repos" && sudo /usr/bin/apt update
+    echo "==> remove cruft" && sudo /usr/bin/apt -y autoremove
+    echo "===> get all the stuffs" && sudo /usr/bin/apt -y full-upgrade
+    echo "====> remove newly created cruft" && sudo /usr/bin/apt -y autoremove && sudo /usr/bin/apt -y autopurge
     echo "> old packages cleaned! <" && sudo apt-get clean
 }
 
@@ -579,60 +624,99 @@ function gettoppid() {
     top -p "$(pgrep -d , "$1")"
 }
 
-#Get/Update vim
-function freshenvim() {
-    sudo apt -y install libncurses5-dev libgtk2.0-dev libatk1.0-dev libcairo2-dev libx11-dev libxpm-dev libxt-dev python3-dev ruby-dev lua5.1 liblua5.1-0-dev libperl-dev git
-    sudo apt -y purge vim vim-runtime gvim vim-tiny vim-common vim-gui-common vim-nox
-    sudo apt -y autoremove
-    VIM_SOURCE="${HOME}"/src/vim
+function freshenvim_and_YCM {
+    echo "Installing and updating Vim..."
+
+    # Update package lists
+    sudo /usr/bin/apt update
+
+    # Install Node.js via fnm (Fast Node Manager)
+    eval "$(fnm env)"
+    fnm install v20.11.0
+
+    # Install the latest versions of Vim dependencies
+    sudo /usr/bin/apt -y install libncurses5-dev libgtk2.0-dev libatk1.0-dev libcairo2-dev libx11-dev libxpm-dev libxt-dev python3-dev ruby-dev lua5.3 liblua5.3-dev libperl-dev git
+
+    # Install latest Vim dependencies that are more frequently updated
+    sudo /usr/bin/apt -y install build-essential cmake clang libclang-dev
+
+    # Remove old Vim installations
+    sudo /usr/bin/apt -y purge vim vim-runtime gvim vim-tiny vim-common vim-gui-common vim-nox
+    sudo /usr/bin/apt -y autoremove
+
+    # Set the Vim source directory
+    local VIM_SOURCE="${HOME}/src/vim"
+
+    # Clone or update Vim from the official repository
     if [[ -d "$VIM_SOURCE" ]]; then
-        cd_func "$VIM_SOURCE"
-        git remote update -p
-        git merge --ff-only @\{u\}
+        cd "$VIM_SOURCE" || return
+        git pull --rebase
         git submodule update --init --recursive
     else
-        git clone https://github.com/vim/vim.git "${HOME}"/src/vim
+        git clone https://github.com/vim/vim.git "$VIM_SOURCE"
+        cd "$VIM_SOURCE" || return
     fi
-    cd_func "$VIM_SOURCE"
-    make clean distclean
-    ./configure --with-features=huge \
-        --enable-multibyte \
-        --enable-rubyinterp=yes \
-        --with-x \
-        --enable-perlinterp=yes \
-        --enable-luainterp=yes \
-        --enable-gui=gtk2 \
-        --enable-cscope \
-        --prefix=/usr/local \
-        --enable-python3interp=yes \
-        --with-python3-config-dir="$(python3-config --configdir)" \
-        --with-python3-command=python3
 
-    cd ~/src/vim/src || return
-    make VIMRUNTIMEDIR=/usr/local/share/vim/vim91
+    # Clean any previous build artifacts
+    make clean distclean
+
+    # Get the Vim version dynamically from the source code
+    local VIM_VERSION=$(awk -F' ' '/ VIM_VERSION_MAJOR\s/ {print $3}' src/version.h)
+    local VIM_MINOR=$(awk -F' ' '/ VIM_VERSION_MINOR\s/ {print $3}' src/version.h)
+
+    # Combine the major and minor version into the runtime directory format
+    local VIMRUNTIMEDIR="/usr/local/share/vim/vim${VIM_VERSION}${VIM_MINOR}"
+
+    # Build Vim from source with latest features
+    cd "$VIM_SOURCE" || return
+    ./configure --with-features=huge \
+                --enable-multibyte \
+                --enable-rubyinterp=yes \
+                --with-x \
+                --enable-perlinterp=yes \
+                --enable-luainterp=yes \
+                --enable-gui=gtk2 \
+                --enable-cscope \
+                --prefix=/usr/local \
+                --enable-python3interp=yes \
+                --with-python3-config-dir="$(python3-config --configdir)" \
+                --with-python3-command=python3
+
+    # Build and install Vim with dynamic runtime directory
+    make VIMRUNTIMEDIR="$VIMRUNTIMEDIR"
     sudo make install
 
+    # Set Vim as the default editor
     sudo update-alternatives --install /usr/bin/editor editor /usr/local/bin/vim 1
     sudo update-alternatives --set editor /usr/local/bin/vim
     sudo update-alternatives --install /usr/bin/vi vi /usr/local/bin/vim 1
     sudo update-alternatives --set vi /usr/local/bin/vim
-    cd || exit
-}
 
-#pre-reqs for YouCompleteMe
-function prep4YCM() {
-    sudo apt -y install build-essential cmake mono-complete openjdk-17-jdk shellcheck golang
+    echo "Vim installation completed."
+
+    # Prepare environment for YouCompleteMe (YCM)
+    echo "Setting up YouCompleteMe (YCM)..."
+
+    # Install latest dependencies for YCM
+    sudo /usr/bin/apt -y install mono-complete openjdk-17-jdk shellcheck golang
+
+    # Install or update Node.js to the latest version
     npm install -g npm@latest
-    YCM_SOURCE="${HOME}"/.vim/bundle/YouCompleteMe
+
+    # Clone or update YouCompleteMe repository
+    local YCM_SOURCE="${HOME}/.vim/bundle/YouCompleteMe"
     if [[ -d "$YCM_SOURCE" ]]; then
         vim +PluginUpdate +qall
-        cd "$YCM_SOURCE" || return
-        python3 install.py --js-completer --ts-completer --cs-completer --clangd-completer --java-completer --rust-completer
     else
         vim +PluginInstall +qall
-        cd "$YCM_SOURCE" || return
-        python3 install.py --js-completer --ts-completer --cs-completer --clangd-completer --java-completer --rust-completer
     fi
+
+    # Build and install YCM with latest available completers
+    cd "$YCM_SOURCE" || return
+    ###python3 install.py --cs-completer --ts-completer --rust-completer --java-completer
+    python3 install.py --all
+
+    echo "YouCompleteMe setup completed."
 }
 
 #Make a 16x16px ico file
