@@ -48,7 +48,7 @@ set t_Co=256
 set encoding=utf-8
 
 if has("gui_running")
-    set guifont=Ubuntu\ Mono\ 13
+    set guifont=Ubuntu\ Mono\ 15
 endif
 EOL
 
