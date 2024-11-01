@@ -14,7 +14,7 @@ AUR_PACKAGES="colordiff ghostwriter screenfetch"
 # Install packages based on package manager detection
 if command -v apt &>/dev/null; then
     echo "Detected APT package manager. Installing packages..."
-    sudo apt update && sudo apt install -y $APT_PACKAGES
+    sudo /usr/bin/apt update && sudo /usr/bin/apt install -y $APT_PACKAGES
 elif command -v pacman &>/dev/null; then
     echo "Detected Pacman package manager. Installing packages..."
     sudo pacman -Sy --needed $PACMAN_PACKAGES
