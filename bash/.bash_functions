@@ -130,30 +130,67 @@ function ponies() {
     fortuna | ponythink -b unicode
 }
 
-#Convert .webm to 192k bitrate .mp3 files
-function webm2mp3() {
-    OUTPUT_DIR=mp3version
-    if [ ! -d "$OUTPUT_DIR" ]; then
-        mkdir "$OUTPUT_DIR"
+# Ensure output directory exists
+ensure_output_dir() {
+    local output_dir="$1"
+    if [ ! -d "$output_dir" ]; then
+        mkdir -p "$output_dir"
     fi
-    for FILE in *.webm; do
-#            filename=$(basename "$FILE")
-#            extension="${filename##*.}"
-#            filename="${filename%.*}"
-        echo -e "Processing video '\\e[32m$FILE\\e[0m'";
-        ffmpeg -n -i "${FILE}" -metadata encoded_by="https://www.ffmpeg.org/" -f mp3 -acodec libmp3lame -ab 192k -ar 44100 -id3v2_version 3 -write_id3v1 1 -vsync 2 "$OUTPUT_DIR/${FILE%.webm}.mp3"
-    done
 }
-#Convert .aiff to 192k bitrate .mp3 files
-function aiff2mp3() {
-   OUTPUT_DIR=mp3version
-   if [ ! -d "$OUTPUT_DIR" ]; then
-      mkdir "$OUTPUT_DIR"
-   fi
-for i in *.aiff
-    do ffmpeg -n -i "$i" -metadata encoded_by="https://www.ffmpeg.org/" -f mp3 -acodec libmp3lame -ab 192k -ar 44100 -id3v2_version 3 -write_id3v1 1 -vsync 2 "$OUTPUT_DIR/${i%.aiff}.mp3"
-    done
+
+# Generalized conversion function with format-specific codec options
+change_to_any_audio_format() {
+    local input_file="$1"
+    local format="$2"
+    local output_dir="${format}_version"
+    local codec_options
+
+    # Set codec options based on target format
+    case "$format" in
+        mp3)  codec_options="-c:a libmp3lame -ac 2 -q:a 1 -id3v2_version 3 -write_id3v1 1" ;;
+        wav)  codec_options="-c:a pcm_s16le -ar 44100 -ac 2 -id3v2_version 3 -write_id3v1 1" ;;
+        flac) codec_options="-c:a flac -id3v2_version 3 -write_id3v1 1" ;;
+        ogg)  codec_options="-c:a libvorbis -q:a 4" ;;
+        aac)  codec_options="-c:a aac -b:a 192k" ;;
+        m4a)  codec_options="-c:a aac -b:a 192k" ;;  # m4a uses aac codec
+        wma)  codec_options="-c:a wmav2 -b:a 192k" ;;
+        *)    echo "Unsupported format: $format"; return 1 ;;
+    esac
+
+    # Ensure output directory exists
+    ensure_output_dir "$output_dir"
+
+    # Run ffmpeg with the specified options
+    ffmpeg -i "$input_file" $codec_options -vsync 2 -n "$output_dir/${input_file%.*}.$format"
 }
+
+# Conversion function for handling multiple extensions for AIFF formats
+convert_aiff_to_any_format() {
+    local input_file="$1"
+    local format="$2"
+    local ext="${input_file##*.}"
+
+    # Convert to lowercase for case-insensitive matching
+    ext="${ext,,}"
+
+    # Check if the input is in AIFF format (aiff, aif, aifc)
+    if [[ "$ext" == "aiff" || "$ext" == "aif" || "$ext" == "aifc" ]]; then
+        change_to_any_audio_format "$input_file" "$format"
+    else
+        echo "Unsupported file format: $ext. Please provide an AIFF file."
+        return 1
+    fi
+}
+
+# Specific functions for each output format
+convert_aiff_to_mp3()  { convert_aiff_to_any_format "$1" "mp3"; }
+convert_aiff_to_wav()  { convert_aiff_to_any_format "$1" "wav"; }
+convert_aiff_to_flac() { convert_aiff_to_any_format "$1" "flac"; }
+convert_aiff_to_ogg()  { convert_aiff_to_any_format "$1" "ogg"; }
+convert_aiff_to_aac()  { convert_aiff_to_any_format "$1" "aac"; }
+convert_aiff_to_m4a()  { convert_aiff_to_any_format "$1" "m4a"; }
+convert_aiff_to_wma()  { convert_aiff_to_any_format "$1" "wma"; }
+
 
 #Make random, dummy files
 function dummyfile() {
@@ -552,10 +589,10 @@ cd_func() {
         # Extract dir N from dirs
         index=${the_new_dir:1}
         [[ -z $index ]] && index=1
-        adir=$(dirs +$index)
+        adir=$(dirs +"$index")
         if [[ -z "$adir" ]]; then
             if [[ "$SHELL" == "/bin/zsh" ]]; then
-                cd ~${index} || exit
+                cd ~"${index}" || exit
                 return 0
             else
                 echo "ADIR is null. Terminating." && return 1

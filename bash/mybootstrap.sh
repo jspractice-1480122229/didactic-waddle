@@ -3,7 +3,38 @@
 echo "My bootstrap begins..."
 
 # Update and install essential packages
-sudo apt update && sudo apt install -y wget curl git cmake tree colordiff net-tools yt-dlp ffmpeg lame ghostscript perl webp fortune gawk sed uuid-runtime imagemagick jpegoptim openssl tar unzip unrar-free p7zip-full make gcc cmark ghostwriter screenfetch
+# Define the packages for each package manager
+APT_PACKAGES="wget curl git cmake tree colordiff net-tools yt-dlp ffmpeg lame ghostscript perl webp fortune gawk sed uuid-runtime imagemagick jpegoptim openssl tar unzip unrar p7zip-full make gcc cmark ghostwriter screenfetch"
+PACMAN_PACKAGES="wget curl git cmake tree net-tools yt-dlp ffmpeg lame ghostscript perl libwebp fortune-mod gawk sed util-linux imagemagick jpegoptim openssl tar unzip unrar p7zip make gcc cmark screenfetch"
+DNF5_PACKAGES="wget curl git cmake tree colordiff net-tools yt-dlp ffmpeg lame ghostscript perl libwebp-tools fortune-mod gawk sed util-linux imagemagick jpegoptim openssl tar unzip unrar p7zip make gcc cmark screenfetch"
+
+# Check for AUR packages
+AUR_PACKAGES="colordiff ghostwriter screenfetch"
+
+# Install packages based on package manager detection
+if command -v apt &>/dev/null; then
+    echo "Detected APT package manager. Installing packages..."
+    sudo apt update && sudo apt install -y $APT_PACKAGES
+elif command -v pacman &>/dev/null; then
+    echo "Detected Pacman package manager. Installing packages..."
+    sudo pacman -Sy --needed $PACMAN_PACKAGES
+    echo "Checking for AUR packages..."
+    for package in $AUR_PACKAGES; do
+        if ! pacman -Qi $package &>/dev/null; then
+            echo "Installing $package from AUR (requires yay)..."
+            yay -S $package
+        fi
+    done
+elif command -v dnf5 &>/dev/null; then
+    echo "Detected DNF5 package manager. Installing packages..."
+    sudo dnf5 install -y $DNF5_PACKAGES
+    echo "Enabling COPR repo for ghostwriter..."
+    sudo dnf5 copr enable -y deathwish/ghostwriter
+    sudo dnf5 install -y ghostwriter
+else
+    echo "Unsupported package manager. Please install the packages manually."
+    exit 1
+fi
 
 # Backup existing .bashrc
 mv -fv "${HOME}/.bashrc" "${HOME}/dotbashrc"
