@@ -69,7 +69,7 @@ function epoch() {
 }
 
 # shrinky PDF
-teenypdf() {
+smushpdf() {
     gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dNOPAUSE -dBATCH -dQUIET -sOutputFile="$2" "$1"
 }
 
