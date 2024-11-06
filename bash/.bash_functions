@@ -96,29 +96,6 @@ function MajorSpoilersShrinkMP3() {
     fi
 }
 
-#aacto128kmp3
-function aacto128kmp3() {
-    OUTPUT_DIR=aacto128kmp3
-    if [ ! -d $OUTPUT_DIR ]; then
-        mkdir $OUTPUT_DIR
-    fi
-    if [ ! -f $OUTPUT_DIR/"$i" ]; then
-        for i in *.aac; do
-            ffmpeg -i "$i" -c:a libmp3lame -ac 2 -q:a 1 -id3v2_version 3 -write_id3v1 1 -vsync 2 -n $OUTPUT_DIR/"${i%.aac}.mp3"
-        done
-    fi
-}
-
-function mp42webm() {
-    FILE="$1"
-    ffmpeg -i "${FILE}" -f webm -c:v libvpx -b:v 1M -acodec libvorbis -y "${FILE%.mp4}.webm"
-}
-
-#Convert .mkv to mp3
-function mkv2mp3() {
-    find . -type f -name "*.mkv" -exec bash -c 'FILE="$1"; ffmpeg -i "${FILE}" -vn -c:a libmp3lame -y "${FILE%.mkv}.mp3";' _ '{}' \;
-}
-
 #random word list
 function wordlist() {
     fortune -l -n 145 | gawk '{print toupper($0)}' | sed -r 's|\ |\n|g' | sed 's|\W||g' | sed -e '/.\{5\}/!d' | sort -u | shuf
@@ -190,7 +167,6 @@ convert_aiff_to_ogg()  { convert_aiff_to_any_format "$1" "ogg"; }
 convert_aiff_to_aac()  { convert_aiff_to_any_format "$1" "aac"; }
 convert_aiff_to_m4a()  { convert_aiff_to_any_format "$1" "m4a"; }
 convert_aiff_to_wma()  { convert_aiff_to_any_format "$1" "wma"; }
-
 
 #Make random, dummy files
 function dummyfile() {
