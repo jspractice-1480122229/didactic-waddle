@@ -19,6 +19,7 @@ email = jspractice-1480122229
 [credential]
 	helper = 
 	helper = /usr/local/bin/git-credential-manager
+ 	credentialStore = secretservice
 [push]
 	default = simple
 [color]
