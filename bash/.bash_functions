@@ -11,11 +11,19 @@
 
 #rip from youtube
 function ripytsong() {
-    yt-dlp --write-thumbnail --prefer-ffmpeg -x --audio-format mp3 --audio-quality 5 "$1"
+    #yt-dlp --write-thumbnail --prefer-ffmpeg -x --audio-format mp3 --audio-quality 5 "$1"
+    #yt-dlp -f bestaudio --write-thumbnail --prefer-ffmpeg --extract-audio --audio-format m4a "$1"
+    #yt-dlp -f bestaudio --extract-audio --prefer-ffmpeg --audio-format m4a --embed-thumbnail -o '%(title)s.%(ext)s' "$1"
+    yt-dlp -f bestaudio --extract-audio --prefer-ffmpeg --audio-format m4a --embed-thumbnail --add-metadata --parse-metadata "comment:%(webpage_url)s" -o '%(title)s.%(ext)s' "$1"
+}
+
+#pull best audio clip
+function pullytaudio {
+    yt-dlp -f bestaudio "$1"
 }
 
 #download best quality yt clip
-bestytclip() {
+function bestytclip() {
     yt-dlp -f best "$1"
 }
 
@@ -69,7 +77,7 @@ function epoch() {
 }
 
 # shrinky PDF
-smushpdf() {
+function smushpdf() {
     gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dNOPAUSE -dBATCH -dQUIET -sOutputFile="$2" "$1"
 }
 
@@ -108,7 +116,7 @@ function ponies() {
 }
 
 # Ensure output directory exists
-ensure_output_dir() {
+function ensure_output_dir() {
     local output_dir="$1"
     if [ ! -d "$output_dir" ]; then
         mkdir -p "$output_dir"
@@ -116,7 +124,7 @@ ensure_output_dir() {
 }
 
 # Generalized conversion function with format-specific codec options
-change_to_any_audio_format() {
+function change_to_any_audio_format() {
     local input_file="$1"
     local format="$2"
     local output_dir="${format}_version"
@@ -142,7 +150,7 @@ change_to_any_audio_format() {
 }
 
 # Conversion function for handling multiple extensions for AIFF formats
-convert_aiff_to_any_format() {
+function convert_aiff_to_any_format() {
     local input_file="$1"
     local format="$2"
     local ext="${input_file##*.}"
@@ -355,36 +363,178 @@ function jpegthumbs() {
 ##################
 # system toolbox #
 ##################
+function detect_package_manager() {
+    if [[ -f /etc/os-release ]]; then
+        source /etc/os-release
+        case "$ID" in
+            ubuntu|debian) echo "apt" ;;
+            fedora) echo "dnf" ;;
+            arch|archcraft) echo "pacman" ;;  # Added detection for Archcraft
+            opensuse*|suse) echo "zypper" ;;
+            *) echo "unknown" ;;
+        esac
+    else
+        echo "unknown"
+    fi
+}
+
+#find and tell me about apps I'm looking for
+function tellme() {
+    local package_manager package details_flag
+    package_manager=$(detect_package_manager)
+    package="$1"
+    details_flag="$2"
+
+    if [[ -z "$package" ]]; then
+        echo "Please provide a package name to search for."
+        return 1
+    fi
+
+    case "$package_manager" in
+        apt)
+            echo "Searching for package '$package' using apt..."
+            apt search "$package" || echo "Error searching for $package with apt."
+            if [[ "$details_flag" == "details" ]]; then
+                echo "Fetching details for package '$package'..."
+                apt show "$package" || echo "Error fetching details for $package with apt."
+            fi
+            ;;
+        pacman)
+            echo "Searching for package '$package' using pacman..."
+            pacman -Ss "$package" || echo "Error searching for $package with pacman."
+            if [[ "$details_flag" == "details" ]]; then
+                echo "Fetching details for package '$package'..."
+                pacman -Si "$package" || echo "Error fetching details for $package with pacman."
+            fi
+            ;;
+        dnf)
+            echo "Searching for package '$package' using dnf..."
+            dnf5 search "$package" || echo "Error searching for $package with dnf."
+            if [[ "$details_flag" == "details" ]]; then
+                echo "Fetching details for package '$package'..."
+                dnf5 info "$package" || echo "Error fetching details for $package with dnf."
+            fi
+            ;;
+        zypper)
+            echo "Searching for package '$package' using zypper..."
+            zypper search "$package" || echo "Error searching for $package with zypper."
+            if [[ "$details_flag" == "details" ]]; then
+                echo "Fetching details for package '$package'..."
+                zypper info "$package" || echo "Error fetching details for $package with zypper."
+            fi
+            ;;
+        *)
+            echo "Unsupported package manager."
+            ;;
+    esac
+}
 
 #give me this app!!!
-gimme() {
-    sudo /usr/bin/apt update
-    sudo /usr/bin/apt -y install "$1"
-    sudo apt-get clean
+function gimme() {
+    local package_manager
+    package_manager=$(detect_package_manager)
+    case "$package_manager" in
+        apt)
+            { sudo /usr/bin/apt update && sudo /usr/bin/apt install -y "$@" && sudo /usr/bin/apt clean; } || echo "Error installing $* with apt."
+            ;;
+        pacman)
+            { sudo pacman -S --noconfirm "$@" && sudo pacman -Scc --noconfirm; } || echo "Error installing $* with pacman."
+            ;;
+        dnf)
+            { sudo dnf5 install -y "$@" && sudo dnf5 clean all; } || echo "Error installing $* with dnf."
+            ;;
+        zypper)
+            { sudo zypper install -y "$@" && sudo zypper clean --all; } || echo "Error installing $* with zypper."
+            ;;
+        *)
+            echo "Unsupported package manager."
+            ;;
+    esac
 }
 
 #reinstall this app!!!
-tryagain() {
-    sudo /usr/bin/apt update
-    sudo /usr/bin/apt -y reinstall "$1"
-    sudo apt-get clean
+function tryagain() {
+    local package_manager
+    package_manager=$(detect_package_manager)
+    case "$package_manager" in
+        apt)
+            { sudo /usr/bin/apt update && sudo /usr/bin/apt reinstall -y "$@" && sudo /usr/bin/apt clean; } || echo "Error reinstalling $* with apt."
+            ;;
+        pacman)
+            { sudo pacman -S --noconfirm "$@" && sudo pacman -Scc --noconfirm; } || echo "Error reinstalling $* with pacman."
+            ;;
+        dnf)
+            { sudo dnf5 reinstall -y "$@" && sudo dnf5 clean all; } || echo "Error reinstalling $* with dnf."
+            ;;
+        zypper)
+            { sudo zypper install -y --force "$@" && sudo zypper clean --all; } || echo "Error reinstalling $* with zypper."
+            ;;
+        *)
+            echo "Unsupported package manager."
+            ;;
+    esac
 }
 
 #completely purge this app!!!
-nuke() {
-    sudo /usr/bin/apt -y purge --auto-remove "$1"
-    sudo /usr/bin/apt -y autoremove --purge
-    sudo apt-get clean
+function nuke() {
+    local package_manager
+    package_manager=$(detect_package_manager)
+    case "$package_manager" in
+        apt)
+            { sudo /usr/bin/apt purge -y --auto-remove "$@" && sudo /usr/bin/apt autoremove --purge && sudo /usr/bin/apt clean; } || echo "Error removing $* with apt."
+            ;;
+        pacman)
+            { sudo pacman -Rns --noconfirm "$@" && sudo pacman -Scc --noconfirm; } || echo "Error removing $* with pacman."
+            ;;
+        dnf)
+            { sudo dnf5 remove -y "$@" && sudo dnf5 autoremove --clean-all && sudo dnf5 clean all; } || echo "Error removing $* with dnf."
+            ;;
+        zypper)
+            { sudo zypper remove -y "$@" && sudo zypper clean --all; } || echo "Error removing $* with zypper."
+            ;;
+        *)
+            echo "Unsupported package manager."
+            ;;
+    esac
 }
 
 #upgrade system
-iago() {
-    echo "=> update repos" && sudo /usr/bin/apt update
-    echo "==> remove cruft" && sudo /usr/bin/apt -y autoremove
-    echo "===> get all the stuffs" && sudo /usr/bin/apt -y full-upgrade
-    echo "====> remove newly created cruft" && sudo /usr/bin/apt -y autoremove && sudo /usr/bin/apt -y autopurge
-    echo "> old packages cleaned! <" && sudo apt-get clean
+function iago() {
+    local package_manager
+    package_manager=$(detect_package_manager)
+    case "$package_manager" in
+        apt)
+            echo "=> Updating repos..." && sudo /usr/bin/apt update || echo "Error updating apt."
+            echo "==> Removing unnecessary packages..." && sudo /usr/bin/apt autoremove -y || echo "Error during autoremove with apt."
+            echo "===> Performing full upgrade..." && sudo /usr/bin/apt full-upgrade -y || echo "Error during full upgrade with apt."
+            echo "====> Cleaning up..." && sudo /usr/bin/apt autoremove -y && sudo /usr/bin/apt autopurge -y && sudo /usr/bin/apt clean || echo "Error cleaning up with apt."
+            ;;
+        pacman)
+            echo "=> Updating repos..." && sudo pacman -Syy || echo "Error updating pacman repos."
+            echo "==> Removing orphans..." && sudo pacman -Rns --noconfirm $(pacman -Qtdq 2>/dev/null) || echo "No orphans found or error during orphan removal with pacman."
+            echo "===> Performing upgrade..." && sudo pacman -Syu --noconfirm || echo "Error upgrading packages with pacman."
+            echo "====> Cleaning up..." && sudo pacman -Scc --noconfirm || echo "Error during cleanup with pacman."
+            ;;
+        dnf)
+            echo "=> Updating repos..." && sudo dnf5 check-update || echo "Error checking updates with dnf."
+            echo "==> Removing unnecessary packages..." && sudo dnf5 autoremove -y || echo "Error during autoremove with dnf."
+            echo "===> Performing upgrade..." && sudo dnf5 upgrade --refresh -y || echo "Error upgrading packages with dnf."
+            echo "====> Cleaning up..." && sudo dnf5 autoremove -y && sudo dnf5 clean all || echo "Error cleaning up with dnf."
+            ;;
+        zypper)
+            echo "=> Refreshing repos..." && sudo zypper refresh || echo "Error refreshing zypper repos."
+            echo "==> Removing unnecessary packages..." && sudo zypper remove -u || echo "Error removing unnecessary packages with zypper."
+            echo "===> Performing upgrade..." && sudo zypper update || echo "Error upgrading packages with zypper."
+            echo "====> Cleaning up..." && sudo zypper clean --all || echo "Error during cleanup with zypper."
+            ;;
+        *)
+            echo "Unsupported package manager."
+            ;;
+    esac
 }
+
+# Load into Zsh automatically
+autoload -Uz detect_package_manager gimme tryagain nuke iago
 
 # Make n-dupes of a file
 function dupe() {
