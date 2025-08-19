@@ -582,6 +582,7 @@ main() {
     local media_packages=()
     local dev_packages=()
     local util_packages=()
+    local shell_packages=()  # New category for shell enhancements
     local aur_packages=()
     local copr_packages=()
     
@@ -595,7 +596,14 @@ main() {
                 "colordiff" "fortune" "uuid-runtime" "unrar" "p7zip-full" 
                 "cmark" "screenfetch" "xz-utils" "coreutils"  # Added xz-utils and coreutils!
             )
-            dev_packages+=("ghostwriter" "python3" "python3-pip")
+            shell_packages+=(
+                "fzf" "dircolors" "podman" "podman-compose"  # Shell enhancements
+            )
+            dev_packages+=(
+                "ghostwriter" "python3" "python3-pip" "golang" "cargo" 
+                "rustc" "nodejs" "npm" "vim-gtk3" "gvim"  # Added development tools
+            )
+            # eza needs special handling - often requires manual install
             ;;
         "dnf5"|"dnf"|"yum")
             media_packages+=(
@@ -606,10 +614,17 @@ main() {
                 "colordiff" "fortune-mod" "util-linux" "unrar" "p7zip" 
                 "cmark" "screenfetch" "xz" "coreutils"  # Added xz and coreutils!
             )
-            dev_packages+=("python3" "python3-pip")
+            shell_packages+=(
+                "fzf" "podman" "podman-compose"  # Shell enhancements
+            )
+            dev_packages+=(
+                "python3" "python3-pip" "golang" "cargo" "rust" 
+                "nodejs" "npm" "vim-X11" "gvim"  # Added development tools
+            )
             # COPR packages for Fedora/RHEL-based systems
             if [[ "$distro" == "fedora" ]]; then
                 copr_packages+=("deathwish/ghostwriter:ghostwriter")
+                copr_packages+=("atim/starship:starship")  # Starship prompt
             fi
             ;;
         "pacman")
@@ -618,11 +633,18 @@ main() {
                 "jpegoptim" "cowsay"  # Added cowsay!
             )
             util_packages+=(
-                "fortune-mod" "util-linux" "unrar" "p7zip" "cmark" "xz" "coreutils"  # Added xz and coreutils!
+                "fortune-mod" "util-linux" "unrar" "p7zip" "cmark" "xz" 
+                "coreutils" "fzf" "podman" "podman-compose"  # Added xz, coreutils, and shell tools!
+            )
+            shell_packages+=(
+                "starship" "zoxide" "eza"  # Shell enhancements available in official repos
+            )
+            dev_packages+=(
+                "ghostwriter" "python" "python-pip" "go" "rust" 
+                "nodejs" "npm" "gvim" "pyenv"  # Added development tools
             )
             # AUR packages for Arch-based systems
-            aur_packages+=("colordiff" "screenfetch" "cwebp" "ponysay")  # Added cwebp and ponysay to AUR!
-            dev_packages+=("ghostwriter" "python" "python-pip")
+            aur_packages+=("colordiff" "screenfetch" "cwebp" "ponysay" "fnm-bin")  # Added fnm-bin to AUR!
             ;;
         "zypper")
             media_packages+=(
@@ -633,7 +655,13 @@ main() {
                 "colordiff" "fortune" "util-linux" "unrar" "p7zip" 
                 "cmark" "screenfetch" "xz" "coreutils"  # Added xz and coreutils!
             )
-            dev_packages+=("python3" "python3-pip")
+            shell_packages+=(
+                "fzf" "podman" "podman-compose"  # Shell enhancements
+            )
+            dev_packages+=(
+                "python3" "python3-pip" "go" "cargo" "rust" 
+                "nodejs" "npm" "gvim"  # Added development tools
+            )
             ;;
     esac
     
