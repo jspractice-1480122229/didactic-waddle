@@ -493,29 +493,61 @@ enable_additional_repos() {
 setup_fish_config() {
     log_info "Setting up fish shell configuration..."
     
-    # Create fish config directory
+    # Create fish config directory structure
     local fish_config_dir="${HOME}/.config/fish"
     mkdir -p "$fish_config_dir/functions"
+    mkdir -p "$fish_config_dir/conf.d"
     
-    # Create a basic config.fish if it doesn't exist
-    if [[ ! -f "$fish_config_dir/config.fish" ]]; then
-        cat > "$fish_config_dir/config.fish" << 'EOL'
+    # Create a comprehensive config.fish
+    cat > "$fish_config_dir/config.fish" << 'EOL'
 # Fish Shell Configuration
 
-# Set up PATH
-set -gx PATH $HOME/.local/bin $PATH
+# Disable greeting
+set -g fish_greeting
 
-# Set default editor
+# Set environment variables
 set -gx EDITOR vim
+set -gx VISUAL gvim
 
-# Aliases
-alias ll 'ls -alh'
-alias la 'ls -A'
-alias l 'ls -CF'
+# Set up PATH
+set -gx PATH $HOME/.local/bin $HOME/binnie /usr/local/go/bin $HOME/.cargo/bin $PATH
 
-# fnm (Fast Node Manager) setup if available
-if test -f $HOME/.fnm/fnm.fish
-    source $HOME/.fnm/fnm.fish
+# GOPATH setup
+set -gx GOPATH $HOME/go
+set -gx PATH $PATH $GOPATH/bin
+
+# Pyenv setup
+if test -d $HOME/.pyenv
+    set -gx PATH $HOME/.pyenv/bin $PATH
+    status is-interactive; and pyenv init - | source
+end
+
+# Starship prompt (if available)
+if command -v starship >/dev/null 2>&1
+    starship init fish | source
+end
+
+# FNM (Fast Node Manager) setup
+if command -v fnm >/dev/null 2>&1
+    fnm env --use-on-cd | source
+end
+
+# Enable FZF keybindings (if available)
+if command -v fzf >/dev/null 2>&1
+    if test -f /usr/share/fish/vendor_functions.d/fzf_key_bindings.fish
+        source /usr/share/fish/vendor_functions.d/fzf_key_bindings.fish
+    else if test -f $HOME/.fzf/shell/key-bindings.fish
+        source $HOME/.fzf/shell/key-bindings.fish
+    end
+    # Try to enable fzf keybindings if function exists
+    if functions -q fzf_key_bindings
+        fzf_key_bindings
+    end
+end
+
+# Enable Zoxide (if available)
+if command -v zoxide >/dev/null 2>&1
+    zoxide init fish | source
 end
 
 # Load custom functions
@@ -523,24 +555,102 @@ for file in $HOME/.config/fish/functions/*.fish
     source $file
 end
 
-# Set greeting
-set fish_greeting "Welcome to Fish Shell!"
+# Load conf.d files
+for file in $HOME/.config/fish/conf.d/*.fish
+    source $file
+end
 EOL
-        log_info "Created fish config file"
-    fi
+    log_info "Created main fish config file"
     
-    # Create a fallback ponies function if ponysay is not available
-    cat > "$fish_config_dir/functions/ponies_fallback.fish" << 'EOL'
-function ponies -d "PONIES!!! (fallback without ponysay)"
+    # Create aliases configuration in conf.d
+    cat > "$fish_config_dir/conf.d/aliases.fish" << 'EOL'
+# Basic aliases
+alias rm 'rm -v'
+alias cp 'cp -v'
+alias mv 'mv -v'
+alias du 'du -kh'
+alias df 'df -kTh'
+alias grep 'grep --color'
+alias awk 'gawk'
+alias mkdir 'mkdir -p'
+alias h 'history'
+alias j 'jobs -l'
+alias .. 'cd ..'
+alias ... 'cd ../..'
+alias .... 'cd ../../..'
+alias ..... 'cd ../../../..'
+alias ...... 'cd ../../../../..'
+
+# Enhanced aliases
+alias path 'echo -e (string replace -a ":" "\n" $PATH)'
+alias rd 'rm -frv'
+alias diff 'colordiff -s'
+alias cls 'clear'
+alias vi 'vim'
+alias fortune 'fortune -a -s -n 125'
+alias purtyjson 'python -m json.tool'
+
+# eza/ls aliases (with fallback to ls if eza not available)
+if command -v eza >/dev/null 2>&1
+    # eza is available
+    alias ls 'eza -F --header --icons --git --group-directories-first'
+    alias ll 'eza -l --header --git --icons --group-directories-first'
+    alias la 'eza -al --header --git --icons --group-directories-first'
+    alias l 'eza --classify --color-scale'
+    alias dir 'eza --oneline'
+    alias vdir 'eza --long'
+    alias lx 'eza --long --sort=extension --ignore-glob="*~"'
+    alias lk 'eza --long --sort=size --reverse'
+    alias ltime 'eza --long --sort=modified --reverse'
+    alias lc 'eza --long --sort=changed --reverse'
+    alias lu 'eza --long --sort=accessed --reverse'
+    alias lr 'eza --long --recurse --git'
+    alias lm 'eza --long --all --git --color=always | more'
+    alias l. 'eza -a | grep -e "^\."'
+    alias lh 'eza -Al'
+    alias ldir 'eza -l --group-directories-first'
+    alias lt 'eza --long --sort=modified --reverse'
+else
+    # Fallback to standard ls
+    alias ls 'ls -F --color=auto --group-directories-first'
+    alias ll 'ls -alF --color=auto'
+    alias la 'ls -A --color=auto'
+    alias l 'ls -CF --color=auto'
+end
+
+# Cowsay/fortune fun (with fallbacks)
+if command -v cowsay >/dev/null 2>&1; and command -v fortune >/dev/null 2>&1
+    alias moo 'fortune -c | cowthink -f (find /usr/share/cowsay/cows -type f 2>/dev/null | shuf -n 1)'
+else if command -v fortune >/dev/null 2>&1
+    alias moo 'fortune -c'
+end
+
+# Container management (if podman is available)
+if command -v podman >/dev/null 2>&1
+    alias aye 'cd $HOME/pickles/dox/ai_rag/ && podman-compose down && podman-compose pull && podman-compose up -d --build'
+end
+
+# Date/time aliases
+alias dia 'date +%s'
+alias tstamp 'date +%Y-%m-%dT%T%:z'
+EOL
+    log_info "Created aliases configuration"
+    
+    # Create a fallback ponies function
+    cat > "$fish_config_dir/functions/ponies.fish" << 'EOL'
+function ponies -d "PONIES!!! (with intelligent fallback)"
     if command -v ponysay >/dev/null 2>&1
         fortune | ponysay
     else if command -v ponythink >/dev/null 2>&1
         fortune | ponythink -b unicode
-    else if command -v cowsay >/dev/null 2>&1
+    else if command -v cowsay >/dev/null 2>&1; and command -v fortune >/dev/null 2>&1
         fortune | cowsay
-    else
+    else if command -v fortune >/dev/null 2>&1
         echo "🦄 PONIES!!! 🦄"
         fortune
+    else
+        echo "🦄 PONIES!!! 🦄"
+        echo "Install fortune and cowsay/ponysay for the full experience!"
     end
 end
 EOL
@@ -576,7 +686,7 @@ main() {
     # Define packages for each distribution
     local core_packages=(
         "wget" "curl" "git" "cmake" "tree" "net-tools" "perl" "gawk" "sed" 
-        "openssl" "tar" "unzip" "make" "gcc" "fish"  # Added fish shell!
+        "openssl" "tar" "unzip" "make" "gcc" "fish" "build-essential"  # Removed vim - compiled from source
     )
     
     local media_packages=()
@@ -590,83 +700,84 @@ main() {
         "apt")
             media_packages+=(
                 "yt-dlp" "ffmpeg" "lame" "ghostscript" "webp" "imagemagick" 
-                "jpegoptim" "cowsay" "cwebp"  # Added cowsay and cwebp!
+                "jpegoptim" "cowsay" "cwebp"
             )
             util_packages+=(
                 "colordiff" "fortune" "uuid-runtime" "unrar" "p7zip-full" 
-                "cmark" "screenfetch" "xz-utils" "coreutils"  # Added xz-utils and coreutils!
+                "cmark" "screenfetch" "xz-utils" "coreutils"
             )
             shell_packages+=(
-                "fzf" "dircolors" "podman" "podman-compose"  # Shell enhancements
+                "fzf" "dircolors" "podman" "podman-compose"
             )
             dev_packages+=(
                 "ghostwriter" "python3" "python3-pip" "golang" "cargo" 
-                "rustc" "nodejs" "npm" "vim-gtk3" "gvim"  # Added development tools
+                "rustc" "nodejs" "npm"  # Removed vim/gvim - will be compiled
             )
-            # eza needs special handling - often requires manual install
             ;;
         "dnf5"|"dnf"|"yum")
             media_packages+=(
                 "yt-dlp" "ffmpeg" "lame" "ghostscript" "libwebp-tools" 
-                "ImageMagick" "jpegoptim" "cowsay"  # Added cowsay, fixed webp-tools!
+                "ImageMagick" "jpegoptim" "cowsay"
             )
             util_packages+=(
                 "colordiff" "fortune-mod" "util-linux" "unrar" "p7zip" 
-                "cmark" "screenfetch" "xz" "coreutils"  # Added xz and coreutils!
+                "cmark" "screenfetch" "xz" "coreutils"
             )
             shell_packages+=(
-                "fzf" "podman" "podman-compose"  # Shell enhancements
+                "fzf" "podman" "podman-compose" "starship"  # Starship is in Fedora repos
             )
             dev_packages+=(
-                "python3" "python3-pip" "golang" "cargo" "rust" 
-                "nodejs" "npm" "vim-X11" "gvim"  # Added development tools
+                "ghostwriter" "python3" "python3-pip" "golang" "cargo" "rust" 
+                "nodejs" "npm"  # Removed vim-X11/gvim
             )
             # COPR packages for Fedora/RHEL-based systems
             if [[ "$distro" == "fedora" ]]; then
-                copr_packages+=("deathwish/ghostwriter:ghostwriter")
-                copr_packages+=("atim/starship:starship")  # Starship prompt
+                # Only add if truly COPR-only packages needed
+                # Most packages moved to main repos
+                copr_packages=()  # Empty for now, ready for COPR-only packages
             fi
             ;;
         "pacman")
             media_packages+=(
                 "yt-dlp" "ffmpeg" "lame" "ghostscript" "libwebp" "imagemagick" 
-                "jpegoptim" "cowsay"  # Added cowsay!
+                "jpegoptim" "cowsay"
             )
             util_packages+=(
-                "fortune-mod" "util-linux" "unrar" "p7zip" "cmark" "xz" 
-                "coreutils" "fzf" "podman" "podman-compose"  # Added xz, coreutils, and shell tools!
+                "colordiff" "fortune-mod" "util-linux" "unrar" "p7zip" "cmark" 
+                "xz" "coreutils" "fzf" "podman" "podman-compose" "screenfetch"  # Most are in main repos
             )
             shell_packages+=(
-                "starship" "zoxide" "eza"  # Shell enhancements available in official repos
+                "starship" "zoxide" "eza" "fnm" "ponysay"  # All in official/community repos now!
             )
             dev_packages+=(
                 "ghostwriter" "python" "python-pip" "go" "rust" 
-                "nodejs" "npm" "gvim" "pyenv"  # Added development tools
+                "nodejs" "npm" "pyenv"  # Removed gvim
             )
             # AUR packages for Arch-based systems
-            aur_packages+=("colordiff" "screenfetch" "cwebp" "ponysay" "fnm-bin")  # Added fnm-bin to AUR!
+            # Only packages that are TRULY AUR-only
+            aur_packages=("microsoft-edge-stable")  # Add other AUR-only packages as needed
             ;;
         "zypper")
             media_packages+=(
                 "yt-dlp" "ffmpeg" "lame" "ghostscript" "libwebp-tools" 
-                "ImageMagick" "jpegoptim" "cowsay"  # Added cowsay!
+                "ImageMagick" "jpegoptim" "cowsay"
             )
             util_packages+=(
                 "colordiff" "fortune" "util-linux" "unrar" "p7zip" 
-                "cmark" "screenfetch" "xz" "coreutils"  # Added xz and coreutils!
+                "cmark" "screenfetch" "xz" "coreutils"
             )
             shell_packages+=(
-                "fzf" "podman" "podman-compose"  # Shell enhancements
+                "fzf" "podman" "podman-compose"
             )
             dev_packages+=(
                 "python3" "python3-pip" "go" "cargo" "rust" 
-                "nodejs" "npm" "gvim"  # Added development tools
+                "nodejs" "npm"  # Removed gvim
             )
             ;;
     esac
     
     # Combine all packages
-    local all_packages=("${core_packages[@]}" "${media_packages[@]}" "${util_packages[@]}" "${dev_packages[@]}")
+    local all_packages=("${core_packages[@]}" "${media_packages[@]}" "${util_packages[@]}" "${dev_packages[@]}" "${shell_packages[@]}")
     
     # Install regular packages
     install_packages "$pkg_manager" "$distro" "${all_packages[@]}"
@@ -767,13 +878,138 @@ main() {
         if [[ -f "$fish_config" ]] && ! grep -q "fnm.fish" "$fish_config"; then
             echo "" >> "$fish_config"
             echo "# fnm (Fast Node Manager)" >> "$fish_config"
-            echo 'if test -f $HOME/.fnm/fnm.fish' >> "$fish_config"
-            echo '    source $HOME/.fnm/fnm.fish' >> "$fish_config"
-            echo 'end' >> "$fish_config"
+            echo 'fnm env --use-on-cd | source' >> "$fish_config"
         fi
     else
         log_warn "Failed to install fnm"
     fi
+    
+    # Install additional shell tools that require special handling
+    install_shell_tools() {
+        log_info "Installing additional shell tools..."
+        
+        # Install Rust toolchain (needed for modern CLI tools)
+        if ! command -v rustc &>/dev/null; then
+            log_info "Installing Rust toolchain..."
+            if curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y; then
+                log_info "Successfully installed Rust"
+                # Source cargo environment
+                source "$HOME/.cargo/env"
+            else
+                log_warn "Failed to install Rust toolchain"
+            fi
+        else
+            log_info "Rust toolchain already installed"
+        fi
+        
+        # Install modern CLI tools via cargo
+        if command -v cargo &>/dev/null; then
+            log_info "Installing modern CLI tools..."
+            
+            # Essential modern replacements
+            local rust_tools=(
+                "eza"       # Better ls
+                "bat"       # Better cat
+                "ripgrep"   # Better grep (rg command)
+                "fd-find"   # Better find (fd command)
+                "sd"        # Better sed
+                "dust"      # Better du
+                "procs"     # Better ps
+                "bottom"    # Better top (btm command)
+                "zoxide"    # Better cd
+                "starship"  # Better prompt
+            )
+            
+            for tool in "${rust_tools[@]}"; do
+                if ! command -v "${tool%% *}" &>/dev/null; then
+                    log_info "Installing $tool via cargo..."
+                    cargo install "$tool" || log_warn "Failed to install $tool"
+                else
+                    log_info "$tool already installed"
+                fi
+            done
+            
+            # Special handling for tools with different binary names
+            if ! command -v rg &>/dev/null; then
+                cargo install ripgrep || log_warn "Failed to install ripgrep"
+            fi
+            
+            if ! command -v fd &>/dev/null; then
+                cargo install fd-find || log_warn "Failed to install fd-find"
+            fi
+            
+            if ! command -v btm &>/dev/null; then
+                cargo install bottom || log_warn "Failed to install bottom"
+            fi
+        fi
+        
+        # Install eza (modern ls replacement)
+        if ! command -v eza &>/dev/null; then
+            log_info "Installing eza..."
+            case "$pkg_manager" in
+                "apt")
+                    # For Ubuntu/Debian, eza needs manual installation
+                    local eza_version="0.18.0"
+                    local eza_url="https://github.com/eza-community/eza/releases/download/v${eza_version}/eza_x86_64-unknown-linux-gnu.tar.gz"
+                    local temp_dir=$(mktemp -d)
+                    if wget -q "$eza_url" -O "$temp_dir/eza.tar.gz"; then
+                        tar -xzf "$temp_dir/eza.tar.gz" -C "$temp_dir"
+                        sudo mv "$temp_dir/eza" /usr/local/bin/
+                        sudo chmod +x /usr/local/bin/eza
+                        log_info "Successfully installed eza"
+                    else
+                        log_warn "Failed to download eza"
+                    fi
+                    rm -rf "$temp_dir"
+                    ;;
+                "dnf5"|"dnf"|"yum")
+                    # Try to install from package manager
+                    if ! sudo $pkg_manager install -y eza 2>/dev/null; then
+                        # Fallback to manual installation
+                        local eza_version="0.18.0"
+                        local eza_url="https://github.com/eza-community/eza/releases/download/v${eza_version}/eza_x86_64-unknown-linux-gnu.tar.gz"
+                        local temp_dir=$(mktemp -d)
+                        if wget -q "$eza_url" -O "$temp_dir/eza.tar.gz"; then
+                            tar -xzf "$temp_dir/eza.tar.gz" -C "$temp_dir"
+                            sudo mv "$temp_dir/eza" /usr/local/bin/
+                            sudo chmod +x /usr/local/bin/eza
+                            log_info "Successfully installed eza"
+                        else
+                            log_warn "Failed to download eza"
+                        fi
+                        rm -rf "$temp_dir"
+                    fi
+                    ;;
+                "pacman")
+                    # Should be installed via package manager already
+                    log_info "eza should be installed via pacman"
+                    ;;
+                "zypper")
+                    # Try cargo installation as fallback
+                    if command -v cargo &>/dev/null; then
+                        cargo install eza
+                    else
+                        log_warn "Cannot install eza - cargo not available"
+                    fi
+                    ;;
+            esac
+        fi
+        
+        # Install pyenv for Python version management
+        if ! command -v pyenv &>/dev/null; then
+            log_info "Installing pyenv..."
+            if curl https://pyenv.run | bash; then
+                log_info "Successfully installed pyenv"
+                # Add to PATH
+                export PATH="$HOME/.pyenv/bin:$PATH"
+            else
+                log_warn "Failed to install pyenv"
+            fi
+        fi
+    }
+    
+    # Call the function to install shell tools
+    install_shell_tools
     
     # System update and cleanup
     log_info "Updating system and cleaning up..."
@@ -859,50 +1095,145 @@ EOL
         log_warn "Fish functions file not found in repository, you'll need to add them manually"
     fi
     
-    # Create a test function to verify fish is working
+    # Create a comprehensive test function
     cat > "${fish_functions_dir}/test_install.fish" << 'EOL'
 function test_install -d "Test if fish installation is working"
     echo "✅ Fish shell is installed and working!"
     echo "🐟 Fish version: $FISH_VERSION"
     echo "📁 Config directory: $__fish_config_dir"
     echo ""
-    echo "Available tools:"
-    command -v yt-dlp >/dev/null 2>&1 && echo "✓ yt-dlp"
-    command -v ffmpeg >/dev/null 2>&1 && echo "✓ ffmpeg"
-    command -v cowsay >/dev/null 2>&1 && echo "✓ cowsay"
-    command -v ponysay >/dev/null 2>&1 && echo "✓ ponysay" || echo "✗ ponysay (using fallback)"
-    command -v fortune >/dev/null 2>&1 && echo "✓ fortune"
-    command -v cwebp >/dev/null 2>&1 && echo "✓ cwebp"
-    command -v xz >/dev/null 2>&1 && echo "✓ xz"
-    command -v fish >/dev/null 2>&1 && echo "✓ fish"
+    echo "=== Core Shell Tools ==="
+    command -v fish >/dev/null 2>&1 && echo "✓ fish" || echo "✗ fish"
+    command -v eza >/dev/null 2>&1 && echo "✓ eza (ls replacement)" || echo "✗ eza (using ls fallback)"
+    command -v starship >/dev/null 2>&1 && echo "✓ starship prompt" || echo "✗ starship"
+    command -v zoxide >/dev/null 2>&1 && echo "✓ zoxide" || echo "✗ zoxide"
+    command -v fzf >/dev/null 2>&1 && echo "✓ fzf" || echo "✗ fzf"
+    command -v fnm >/dev/null 2>&1 && echo "✓ fnm" || echo "✗ fnm"
+    command -v pyenv >/dev/null 2>&1 && echo "✓ pyenv" || echo "✗ pyenv"
+    
     echo ""
-    echo "Run 'ponies' to test the ponies function!"
+    echo "=== Media Tools ==="
+    command -v yt-dlp >/dev/null 2>&1 && echo "✓ yt-dlp" || echo "✗ yt-dlp"
+    command -v ffmpeg >/dev/null 2>&1 && echo "✓ ffmpeg" || echo "✗ ffmpeg"
+    command -v lame >/dev/null 2>&1 && echo "✓ lame" || echo "✗ lame"
+    command -v cwebp >/dev/null 2>&1 && echo "✓ cwebp" || echo "✗ cwebp"
+    command -v magick >/dev/null 2>&1 && echo "✓ imagemagick" || echo "✗ imagemagick"
+    
+    echo ""
+    echo "=== Fun Tools ==="
+    command -v cowsay >/dev/null 2>&1 && echo "✓ cowsay" || echo "✗ cowsay"
+    command -v ponysay >/dev/null 2>&1 && echo "✓ ponysay" || echo "✗ ponysay (using fallback)"
+    command -v fortune >/dev/null 2>&1 && echo "✓ fortune" || echo "✗ fortune"
+    
+    echo ""
+    echo "=== Development Tools ==="
+    command -v git >/dev/null 2>&1 && echo "✓ git" || echo "✗ git"
+    command -v vim >/dev/null 2>&1 && echo "✓ vim" || echo "✗ vim"
+    command -v gvim >/dev/null 2>&1 && echo "✓ gvim" || echo "✗ gvim"
+    command -v go >/dev/null 2>&1 && echo "✓ go" || echo "✗ go"
+    command -v cargo >/dev/null 2>&1 && echo "✓ cargo/rust" || echo "✗ cargo/rust"
+    command -v node >/dev/null 2>&1 && echo "✓ node.js" || echo "✗ node.js"
+    command -v python3 >/dev/null 2>&1 && echo "✓ python3" || echo "✗ python3"
+    
+    echo ""
+    echo "=== Container Tools ==="
+    command -v podman >/dev/null 2>&1 && echo "✓ podman" || echo "✗ podman"
+    command -v podman-compose >/dev/null 2>&1 && echo "✓ podman-compose" || echo "✗ podman-compose"
+    
+    echo ""
+    echo "=== Utility Tools ==="
+    command -v colordiff >/dev/null 2>&1 && echo "✓ colordiff" || echo "✗ colordiff"
+    command -v xz >/dev/null 2>&1 && echo "✓ xz" || echo "✗ xz"
+    command -v unrar >/dev/null 2>&1 && echo "✓ unrar" || echo "✗ unrar"
+    command -v 7z >/dev/null 2>&1 && echo "✓ 7z" || echo "✗ 7z"
+    
+    echo ""
+    echo "🎉 Run 'ponies' to test the ponies function!"
+    echo "📝 Run 'moo' for a random cowsay fortune!"
+    echo "🚀 Your fish shell is ready to go!"
+end
+EOL
+    
+    # Create a helper function to check missing dependencies
+    cat > "${fish_functions_dir}/check_deps.fish" << 'EOL'
+function check_deps -d "Check for missing dependencies for fish functions"
+    set -l missing_deps
+    
+    # Check critical dependencies
+    set -l deps yt-dlp ffmpeg lame imagemagick cwebp xz unrar 7z colordiff fortune cowsay
+    
+    for dep in $deps
+        if not command -v $dep >/dev/null 2>&1
+            set missing_deps $missing_deps $dep
+        end
+    end
+    
+    if test (count $missing_deps) -gt 0
+        echo "⚠️  Missing dependencies: $missing_deps"
+        echo "Install them with your package manager to enable all functions"
+        return 1
+    else
+        echo "✅ All core dependencies are installed!"
+        return 0
+    end
 end
 EOL
     
     # Final message
     log_info "Bootstrap completed successfully!"
     log_info "Distribution: $distro ($pkg_manager)"
-    log_info "Please run 'source ~/.bashrc' to load the new bash configuration"
-    log_info "To use fish shell, simply type 'fish' or set it as your default shell with:"
-    log_info "  chsh -s $(which fish)"
-    log_info "Once in fish, run 'test_install' to verify everything is working"
+    echo ""
+    log_info "=== Next Steps ==="
+    log_info "1. Run 'source ~/.bashrc' to load the new bash configuration"
+    log_info "2. Enter fish shell by typing: fish"
+    log_info "3. Set fish as default shell (optional): chsh -s $(which fish)"
+    log_info "4. In fish, run these commands to test:"
+    log_info "   - test_install   # Check all installed tools"
+    log_info "   - check_deps     # Check for missing dependencies"
+    log_info "   - ponies         # Test the ponies function"
+    log_info "   - moo           # Test cowsay with fortune"
+    log_info ""
+    log_info "5. Compile Vim from source (system test):"
+    log_info "   - bash -c 'source ~/.bash_functions && install_vim'"
+    log_info "   - bash -c 'source ~/.bash_functions && install_ycm'"
     
     if [[ "$pkg_manager" == "pacman" ]]; then
+        log_info ""
         log_info "Note: You may need to restart your terminal for AUR helper to be available"
     fi
+    
+    # Environment variables reminder
+    echo ""
+    log_info "=== Environment Variables to Set ==="
+    log_info "Add these to your fish config if needed:"
+    log_info "  set -Ux HF_TOKEN 'your-huggingface-token'"
+    log_info "  set -Ux CEREBRAS_API_KEY 'your-cerebras-key'"
+    log_info "  set -Ux GHCR_TOKEN 'your-github-container-token'"
+    log_info "  set -Ux DISCOGS_TOKEN 'your-discogs-token'"
     
     # Check what's installed
     echo ""
     log_info "=== Installation Summary ==="
     command -v fish &>/dev/null && log_info "✓ Fish shell installed" || log_error "✗ Fish shell NOT installed"
+    command -v eza &>/dev/null && log_info "✓ eza (ls replacement) installed" || log_warn "✗ eza NOT installed (using ls fallback)"
+    command -v starship &>/dev/null && log_info "✓ Starship prompt installed" || log_warn "✗ Starship NOT installed"
+    command -v zoxide &>/dev/null && log_info "✓ Zoxide installed" || log_warn "✗ Zoxide NOT installed"
+    command -v fzf &>/dev/null && log_info "✓ FZF installed" || log_warn "✗ FZF NOT installed"
+    command -v fnm &>/dev/null && log_info "✓ FNM installed" || log_warn "✗ FNM NOT installed"
+    command -v pyenv &>/dev/null && log_info "✓ pyenv installed" || log_warn "✗ pyenv NOT installed"
     command -v cowsay &>/dev/null && log_info "✓ Cowsay installed" || log_warn "✗ Cowsay NOT installed"
     command -v ponysay &>/dev/null && log_info "✓ Ponysay installed" || log_warn "✗ Ponysay NOT installed (fallback available)"
+    command -v colordiff &>/dev/null && log_info "✓ Colordiff installed" || log_warn "✗ Colordiff NOT installed"
     command -v cwebp &>/dev/null && log_info "✓ WebP tools installed" || log_warn "✗ WebP tools NOT installed"
     command -v xz &>/dev/null && log_info "✓ XZ utils installed" || log_warn "✗ XZ utils NOT installed"
     command -v fortune &>/dev/null && log_info "✓ Fortune installed" || log_warn "✗ Fortune NOT installed"
     command -v yt-dlp &>/dev/null && log_info "✓ yt-dlp installed" || log_warn "✗ yt-dlp NOT installed"
     command -v ffmpeg &>/dev/null && log_info "✓ FFmpeg installed" || log_warn "✗ FFmpeg NOT installed"
+    command -v podman &>/dev/null && log_info "✓ Podman installed" || log_warn "✗ Podman NOT installed"
+    command -v go &>/dev/null && log_info "✓ Go installed" || log_warn "✗ Go NOT installed"
+    command -v cargo &>/dev/null && log_info "✓ Rust/Cargo installed" || log_warn "✗ Rust/Cargo NOT installed"
+    command -v node &>/dev/null && log_info "✓ Node.js installed" || log_warn "✗ Node.js NOT installed"
+    command -v vim &>/dev/null && log_warn "⚠️ Vim found (should be compiled from source)" || log_info "✓ Vim not installed (will compile from source)"
     
     echo ""
     log_info "==========================="
