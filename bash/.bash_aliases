@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # FILE: ~/.bash_aliases
-# Modern bash aliases matching fish configuration
+# Bash aliases with feature parity to Fish configuration
 
 #=============================================================
 # CORE UNIX IMPROVEMENTS
@@ -34,7 +34,7 @@ alias ...='cd ../..'
 alias ....='cd ../../..'
 alias .....='cd ../../../..'
 alias ......='cd ../../../../..'
-alias -- -='cd -'  # Go to previous directory
+alias -- -='cd -'  # Go to previous directory (-- stops option parsing)
 alias ~='cd ~'  # Go home
 
 # Quick listing after cd (function is better for this)
@@ -48,7 +48,9 @@ cs() {
 
 alias path='echo -e ${PATH//:/\\n}'
 alias libpath='echo -e ${LD_LIBRARY_PATH//:/\\n}'
-alias bashpath='echo -e ${BASH_SOURCE[@]}'
+
+# Bash doesn't have fish_user_paths, but we can show bash-specific paths
+alias bashpath='echo -e ${BASH_ENV:-"Not set"}'
 
 #=============================================================
 # LS FAMILY - EZA ENHANCED
@@ -86,7 +88,7 @@ if command -v eza &>/dev/null; then
     alias dir='eza --oneline'
     alias vdir='eza --long'
 else
-    # Fallback to standard ls
+    # Fallback with warning
     echo "⚠️  eza not found! Install with: cargo install eza" >&2
     echo "   Using standard ls as fallback" >&2
     
@@ -94,16 +96,7 @@ else
     alias ll='ls -alF --color=auto'
     alias la='ls -A --color=auto'
     alias l='ls -CF --color=auto'
-    alias lh='ls -Al --color=auto'
     alias l.='ls -d .* --color=auto'
-    
-    # Sorting with standard ls
-    alias lt='ls -ltr --color=auto'  # By time
-    alias lk='ls -lSr --color=auto'  # By size
-    alias lx='ls -lXB --color=auto'  # By extension
-    
-    alias dir='ls --color=auto --format=single-column'
-    alias vdir='ls --color=auto --format=long'
 fi
 
 #=============================================================
@@ -164,10 +157,10 @@ alias week='date +%V'  # Week number
 # FUN STUFF
 #=============================================================
 
-# Bash-compatible random
+# Bash-compatible random (RANDOM is built-in)
 alias randumb='echo $RANDOM'
 alias rand100='echo $((RANDOM % 100 + 1))'
-alias coinflip='echo $([ $((RANDOM % 2)) -eq 0 ] && echo "heads" || echo "tails")'
+alias coinflip='[ $((RANDOM % 2)) -eq 0 ] && echo "heads" || echo "tails"'
 alias dice='echo $((RANDOM % 6 + 1))'
 
 # Fortune and cowsay
@@ -190,38 +183,17 @@ else
     alias moo='echo "🐄 Moo! (Install fortune and cowsay for the full experience)"'
 fi
 
-# Ponies function (with fallback)
-ponies() {
-    if command -v ponysay &>/dev/null; then
-        fortune | ponysay
-    elif command -v ponythink &>/dev/null; then
-        fortune | ponythink -b unicode
-    elif command -v cowsay &>/dev/null && command -v fortune &>/dev/null; then
-        fortune | cowsay
-    elif command -v fortune &>/dev/null; then
-        echo "🦄 PONIES!!! 🦄"
-        fortune
-    else
-        echo "🦄 PONIES!!! 🦄"
-        echo "Install fortune and cowsay/ponysay for the full experience!"
-    fi
-}
-
 #=============================================================
 # DEVELOPMENT TOOLS
 #=============================================================
 
-# Git shortcuts
+# Git shortcuts (basic - you probably have more in git config)
 alias g='git'
 alias gs='git status'
 alias ga='git add'
 alias gc='git commit'
 alias gp='git push'
 alias gl='git log --oneline --graph --decorate'
-alias gd='git diff'
-alias gb='git branch'
-alias gco='git checkout'
-alias gcl='git clone'
 
 # Python
 alias py='python3'
@@ -251,18 +223,21 @@ alias diskinfo='df -h'
 alias mountinfo='mount | column -t'
 
 #=============================================================
-# QUICK EDITS
+# QUICK EDITS (add your own config files)
 #=============================================================
 
 alias bashrc='vim ~/.bashrc'
-alias bashalias='vim ~/.bash_aliases'
-alias bashfunc='vim ~/.bash_functions'
+alias bashaliases='vim ~/.bash_aliases'
+alias bashfunctions='vim ~/.bash_functions'
 alias vimrc='vim ~/.vimrc'
 alias gitconfig='vim ~/.gitconfig'
+
+# Fish config (when in bash but want to edit fish)
 alias fishconfig='vim ~/.config/fish/config.fish'
+alias fishaliases='vim ~/.config/fish/conf.d/aliases.fish'
 
 #=============================================================
-# ARCH/PACMAN SPECIFIC
+# ARCH/PACMAN SPECIFIC (if on Arch-based system)
 #=============================================================
 
 if command -v pacman &>/dev/null; then
@@ -291,63 +266,9 @@ command -v procs &>/dev/null && alias ps='procs'
 command -v sd &>/dev/null && alias sed='sd'
 
 #=============================================================
-# UTILITY FUNCTIONS
+# HELP FUNCTION
 #=============================================================
 
-# Extract any archive
-extract() {
-    if [ -z "$1" ]; then
-        echo "Usage: extract <archive_file>"
-        return 1
-    fi
-    
-    if [ ! -f "$1" ]; then
-        echo "Error: '$1' is not a valid file"
-        return 1
-    fi
-    
-    case "$1" in
-        *.tar.bz2)  tar xjf "$1"    ;;
-        *.tar.gz)   tar xzf "$1"    ;;
-        *.bz2)      bunzip2 "$1"    ;;
-        *.rar)      unrar x "$1"    ;;
-        *.gz)       gunzip "$1"     ;;
-        *.tar)      tar xf "$1"     ;;
-        *.tbz2)     tar xjf "$1"    ;;
-        *.tgz)      tar xzf "$1"    ;;
-        *.zip)      unzip "$1"      ;;
-        *.Z)        uncompress "$1" ;;
-        *.7z)       7z x "$1"       ;;
-        *.xz)       unxz "$1"       ;;
-        *)          echo "Cannot extract '$1'" ; return 1 ;;
-    esac
-}
-
-# Make directory and cd into it
-mkcd() {
-    mkdir -p "$1" && cd "$1"
-}
-
-# Backup with timestamp
-backup() {
-    if [ -z "$1" ]; then
-        echo "Usage: backup <file_or_directory>"
-        return 1
-    fi
-    
-    local timestamp=$(date +%Y%m%d_%H%M%S)
-    local target="$1"
-    
-    if [ -e "$target" ]; then
-        cp -r "$target" "${target}.backup_${timestamp}"
-        echo "✅ Backed up to ${target}.backup_${timestamp}"
-    else
-        echo "❌ $target does not exist"
-        return 1
-    fi
-}
-
-# Show all aliases help
 alias-help() {
     echo "🐚 Bash Aliases Help"
     echo "==================="
@@ -356,34 +277,26 @@ alias-help() {
     echo "  .., ..., ....  - Go up directories"
     echo "  cs PATH        - cd and ls combined"
     echo ""
-    echo "Listing (eza/ls):"
+    echo "Listing (eza):"
     echo "  ls, l, ll, la  - Various listing formats"
     echo "  lt, lk, lx     - Sort by time, size, extension"
-    echo "  ltree          - Tree view (eza only)"
-    echo "  ldir, lfile    - Directories or files only (eza only)"
+    echo "  ltree          - Tree view"
+    echo "  ldir, lfile    - Directories or files only"
     echo ""
     echo "Fun Stuff:"
     echo "  moo            - Random cowsay fortune"
-    echo "  ponies         - Ponysay or fallback"
-    echo "  randumb        - Random number (0-32767)"
-    echo "  rand100        - Random 1-100"
+    echo "  randumb        - Random number"
     echo "  coinflip       - Heads or tails"
-    echo "  dice           - Roll a die (1-6)"
-    echo ""
-    echo "Development:"
-    echo "  g, gs, ga, gc  - Git shortcuts"
-    echo "  py, pip, venv  - Python shortcuts"
-    echo "  cb, cr, ct     - Cargo shortcuts (if Rust installed)"
+    echo "  dice           - Roll a die"
     echo ""
     echo "Type 'alias' to see all defined aliases"
-    echo "Type 'type <alias>' to see what an alias does"
 }
 
 #=============================================================
 # LOAD PERSONAL ALIASES
 #=============================================================
 
-# Load personal/machine-specific aliases if they exist
+# Load personal aliases if they exist
 if [ -f ~/.bash_aliases_personal ]; then
     source ~/.bash_aliases_personal
 fi
