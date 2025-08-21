@@ -1,302 +1,704 @@
 #!/usr/bin/env bash
-# FILE: ~/.bash_aliases
-# Bash aliases with feature parity to Fish configuration
+# FILE: ~/.bash_functions
+# Bash functions with feature parity to Fish configuration
 
 #=============================================================
-# CORE UNIX IMPROVEMENTS
+# NAVIGATION & FILE HELPERS
 #=============================================================
 
-# Verbose and safe operations
-alias rm='rm -iv'  # Interactive + verbose for safety
-alias cp='cp -iv'
-alias mv='mv -iv'
-alias mkdir='mkdir -pv'  # Create parent dirs + verbose
-alias rmdir='rmdir -v'
-
-# Human-readable output
-alias du='du -kh'
-alias df='df -kTh'
-alias free='free -h'
-
-# Better defaults
-alias grep='grep --color=auto'
-alias egrep='egrep --color=auto'
-alias fgrep='fgrep --color=auto'
-alias awk='gawk'  # GNU awk if available
-alias sed='sed -E'  # Extended regex by default
-
-#=============================================================
-# NAVIGATION SHORTCUTS
-#=============================================================
-
-alias ..='cd ..'
-alias ...='cd ../..'
-alias ....='cd ../../..'
-alias .....='cd ../../../..'
-alias ......='cd ../../../../..'
-alias -- -='cd -'  # Go to previous directory (-- stops option parsing)
-alias ~='cd ~'  # Go home
-
-# Quick listing after cd (function is better for this)
+# cd and ls combined
 cs() {
     cd "$@" && ls
 }
 
-#=============================================================
-# PATH INSPECTION
-#=============================================================
+# Make directory and enter it
+mkcd() {
+    mkdir -p "$1" && cd "$1"
+}
 
-alias path='echo -e ${PATH//:/\\n}'
-alias libpath='echo -e ${LD_LIBRARY_PATH//:/\\n}'
-
-# Bash doesn't have fish_user_paths, but we can show bash-specific paths
-alias bashpath='echo -e ${BASH_ENV:-"Not set"}'
-
-#=============================================================
-# LS FAMILY - EZA ENHANCED
-#=============================================================
-
-# Check if eza is available
-if command -v eza &>/dev/null; then
-    # Basic listing
-    alias ls='eza -F --header --icons --git --group-directories-first'
-    alias l='eza --classify --color-scale'
+# Extract any archive format
+extract() {
+    if [ -z "$1" ]; then
+        echo "Usage: extract <archive_file>"
+        return 1
+    fi
     
-    # Long formats
-    alias ll='eza -l --header --git --icons --group-directories-first'
-    alias la='eza -al --header --git --icons --group-directories-first'
-    alias lh='eza -Al'  # Hidden files
-    alias l.='eza -a | grep "^\."'  # Only dotfiles
+    if [ ! -f "$1" ]; then
+        echo "Error: $1 is not a valid file"
+        return 1
+    fi
     
-    # Sorting variations
-    alias lt='eza --long --sort=modified --reverse'  # By time, newest last
-    alias ltr='eza --long --sort=modified'  # By time, newest first
-    alias lk='eza --long --sort=size --reverse'  # By size, largest last
-    alias lkr='eza --long --sort=size'  # By size, largest first
-    alias lx='eza --long --sort=extension --ignore-glob="*~"'  # By extension
-    alias lc='eza --long --sort=changed --reverse'  # By change time
-    alias lu='eza --long --sort=accessed --reverse'  # By access time
+    case "$1" in
+        *.tar.bz2)   tar xjf "$1"    ;;
+        *.tar.gz)    tar xzf "$1"    ;;
+        *.bz2)       bunzip2 "$1"    ;;
+        *.rar)       unrar x "$1"    ;;
+        *.gz)        gunzip "$1"     ;;
+        *.tar)       tar xf "$1"     ;;
+        *.tbz2)      tar xjf "$1"    ;;
+        *.tgz)       tar xzf "$1"    ;;
+        *.zip)       unzip "$1"      ;;
+        *.Z)         uncompress "$1" ;;
+        *.7z)        7z x "$1"       ;;
+        *.xz)        unxz "$1"       ;;
+        *)           echo "Cannot extract $1" && return 1 ;;
+    esac
+}
+
+# Quick backup with timestamp
+backup() {
+    if [ -z "$1" ]; then
+        echo "Usage: backup <file_or_directory>"
+        return 1
+    fi
     
-    # Special views
-    alias ldir='eza -lD'  # Directories only
-    alias lfile='eza -lf'  # Files only
-    alias ltree='eza --tree --level=2'  # Tree view
-    alias lr='eza --long --recurse --git'  # Recursive
-    alias lm='eza --long --all --git --color=always | less -R'  # Paged
+    local timestamp=$(date +%Y%m%d_%H%M%S)
+    local target="$1"
     
-    # One-line and vertical formats
-    alias dir='eza --oneline'
-    alias vdir='eza --long'
-else
-    # Fallback with warning
-    echo "⚠️  eza not found! Install with: cargo install eza" >&2
-    echo "   Using standard ls as fallback" >&2
-    
-    alias ls='ls -F --color=auto --group-directories-first'
-    alias ll='ls -alF --color=auto'
-    alias la='ls -A --color=auto'
-    alias l='ls -CF --color=auto'
-    alias l.='ls -d .* --color=auto'
-fi
+    if [ -e "$target" ]; then
+        cp -r "$target" "${target}.backup_${timestamp}"
+        echo "✅ Backed up to ${target}.backup_${timestamp}"
+    else
+        echo "❌ $target does not exist"
+        return 1
+    fi
+}
 
 #=============================================================
-# PROCESS MANAGEMENT
+# MEDIA PROCESSING FUNCTIONS
 #=============================================================
 
-alias h='history'
-alias j='jobs -l'
-alias psall='ps -ejH'
-alias pstree='pstree -p'
-alias top='htop 2>/dev/null || top'  # Prefer htop if available
+media() {
+    local operation="$1"
+    shift
+    
+    case "$operation" in
+        rip)
+            # Download best audio from YouTube with metadata
+            yt-dlp -f bestaudio --extract-audio --prefer-ffmpeg \
+                --audio-format m4a --embed-thumbnail --add-metadata \
+                --parse-metadata "comment:%(webpage_url)s" \
+                -o '%(title)s.%(ext)s' "$@"
+            ;;
+        audio)
+            # Download best audio only
+            yt-dlp -f bestaudio "$@"
+            ;;
+        video)
+            # Download best quality video
+            yt-dlp -f best "$@"
+            ;;
+        louder)
+            # Increase MP3 volume
+            if [ -z "$1" ]; then
+                echo "Usage: media louder FILE.mp3"
+                return 1
+            fi
+            lame --scale 2 "$1" "/tmp/tmp_$$.mp3"
+            mv "/tmp/tmp_$$.mp3" "$1"
+            ;;
+        compress)
+            # Compress MP3s for podcasts
+            local output_dir="${2:-compressed}"
+            mkdir -p "$output_dir"
+            for f in *.mp3; do
+                [ -f "$f" ] || continue
+                ffmpeg -n -i "$f" -metadata genre="Podcast" -ac 1 -ab 40k \
+                    -ar 22050 -id3v2_version 3 -write_id3v1 1 -vsync 2 \
+                    "$output_dir/$f"
+            done
+            ;;
+        convert)
+            # Audio format conversion
+            local format="${1:-mp3}"
+            local output_dir="${format}_version"
+            mkdir -p "$output_dir"
+            
+            for f in *.{wav,ogg,flac} 2>/dev/null; do
+                [ -f "$f" ] || continue
+                local base="${f%.*}"
+                case "$format" in
+                    mp3)  ffmpeg -i "$f" -vn -ar 44100 -ac 2 -b:a 192k "$output_dir/${base}.mp3" ;;
+                    m4a)  ffmpeg -i "$f" -c:a aac -b:a 192k "$output_dir/${base}.m4a" ;;
+                    *)    echo "Unsupported format: $format" && return 1 ;;
+                esac
+            done
+            ;;
+        play)
+            # Play random audio files
+            local dir="${1:-.}"
+            while IFS= read -r f; do
+                ffplay -autoexit -nodisp "$f" >/dev/null 2>&1
+            done < <(find "$dir" -type f \( -iname "*.mp3" -o -iname "*.flac" -o -iname "*.wav" \) | shuf)
+            ;;
+        *)
+            echo "Usage: media [rip|audio|video|louder|compress|convert|play] [args]"
+            ;;
+    esac
+}
+
+#=============================================================
+# IMAGE PROCESSING FUNCTIONS
+#=============================================================
+
+img() {
+    local operation="$1"
+    shift
+    
+    case "$operation" in
+        resize)
+            # Resize images to max width
+            local width="${1:-800}"
+            local quality="${2:-60}"
+            
+            for f in *.{jpg,jpeg,png,gif,bmp} 2>/dev/null; do
+                [ -f "$f" ] || continue
+                local base="${f%.*}"
+                local ext="${f##*.}"
+                
+                magick "$f" -resize "${width}x>" -quality "$quality" "/tmp/tmp_$$.$ext"
+                cwebp -q "$quality" -m 6 -mt "/tmp/tmp_$$.$ext" -o "resized_${base}.webp"
+                rm "/tmp/tmp_$$.$ext"
+            done
+            ;;
+        clean)
+            # Clean JPEG metadata
+            for f in *.jpg; do
+                [ -f "$f" ] || continue
+                jpegoptim -pqt --strip-all "$f"
+            done
+            ;;
+        thumb)
+            # Create thumbnails
+            local size="${1:-48x38}"
+            
+            for f in *.jpg; do
+                [ -f "$f" ] || continue
+                local base="${f%.*}"
+                convert -sample "$size" "$f" "thumb_${base}.jpg"
+                jpegoptim -pqt --strip-all "thumb_${base}.jpg"
+            done
+            ;;
+        favicon)
+            # Create favicon
+            if [ -z "$1" ]; then
+                echo "Usage: img favicon INPUT [OUTPUT]"
+                return 1
+            fi
+            local output="${2:-favicon.ico}"
+            magick convert "$1" -resize 16x16 -gravity center -crop 16x16+0+0 \
+                -flatten -colors 256 -background transparent "$output"
+            ;;
+        *)
+            echo "Usage: img [resize|clean|thumb|favicon] [args]"
+            ;;
+    esac
+}
 
 #=============================================================
 # FILE OPERATIONS
 #=============================================================
 
-alias rd='rm -frv'  # Careful with this one!
-alias cpdir='cp -frv'
-alias chmod='chmod -c'
-alias chown='chown -c'
-
-# Modern replacements if available
-command -v trash &>/dev/null && alias rm='trash'  # Safer rm
-command -v rsync &>/dev/null && alias cpdir='rsync -av --progress'
-
-#=============================================================
-# TEXT PROCESSING & VIEWING
-#=============================================================
-
-alias vi='vim'
-alias nano='nano -w'  # No word wrap
-alias cls='clear'
-alias less='less -R'  # Handle colors
-
-# Diff with color
-if command -v colordiff &>/dev/null; then
-    alias diff='colordiff -s'
-elif command -v diff &>/dev/null; then
-    alias diff='diff --color=auto'
-fi
-
-# JSON pretty printing
-alias purtyjson='python3 -m json.tool 2>/dev/null || python -m json.tool'
-alias json='jq . 2>/dev/null || purtyjson'  # Use jq if available
-
-#=============================================================
-# DATE & TIME
-#=============================================================
-
-alias now='date +"%Y-%m-%d %H:%M:%S"'
-alias nowutc='date -u +"%Y-%m-%d %H:%M:%S UTC"'
-alias today='date +"%Y-%m-%d"'
-alias dia='date +%s'  # Unix timestamp
-alias tstamp='date +%Y-%m-%dT%T%:z'  # ISO 8601
-alias week='date +%V'  # Week number
-
-#=============================================================
-# FUN STUFF
-#=============================================================
-
-# Bash-compatible random (RANDOM is built-in)
-alias randumb='echo $RANDOM'
-alias rand100='echo $((RANDOM % 100 + 1))'
-alias coinflip='[ $((RANDOM % 2)) -eq 0 ] && echo "heads" || echo "tails"'
-alias dice='echo $((RANDOM % 6 + 1))'
-
-# Fortune and cowsay
-if command -v fortune &>/dev/null; then
-    alias fortune='fortune -a -s -n 125'
-    alias fortuna='\fortune'  # Original fortune without filters
+fileops() {
+    local operation="$1"
+    shift
     
-    if command -v cowsay &>/dev/null; then
-        # Improved moo - check if cowsay directory exists
-        if [ -d /usr/share/cowsay/cows ]; then
-            alias moo='fortune -c | cowthink -f $(find /usr/share/cowsay/cows -type f -name "*.cow" | shuf -n 1)'
-        else
-            alias moo='fortune | cowsay'
-        fi
+    case "$operation" in
+        lowercase)
+            # Convert filenames to lowercase
+            for f in "$@"; do
+                local new=$(echo "$f" | tr '[:upper:]' '[:lower:]')
+                if [ "$f" != "$new" ]; then
+                    mv -- "$f" "$new"
+                fi
+            done
+            ;;
+        duplicate)
+            # Duplicate files
+            if [ -z "$1" ] || [ -z "$2" ]; then
+                echo "Usage: fileops duplicate FILE COUNT"
+                return 1
+            fi
+            local count="$2"
+            for ((i=1; i<=count; i++)); do
+                cp "$1" "${i}${1}"
+            done
+            ;;
+        swap)
+            # Swap two files
+            if [ -z "$1" ] || [ -z "$2" ]; then
+                echo "Usage: fileops swap FILE1 FILE2"
+                return 1
+            fi
+            local tmp="/tmp/tmp_$$"
+            mv -- "$1" "$tmp"
+            mv -- "$2" "$1"
+            mv -- "$tmp" "$2"
+            ;;
+        random)
+            # Create random data files
+            if [ "$1" = "binary" ]; then
+                dd if=/dev/urandom of="$2" bs="$3" count=1
+            else
+                head -c "$2" </dev/urandom > "$1"
+            fi
+            ;;
+        clean)
+            # Remove blanks
+            if [ -z "$1" ]; then
+                echo "Usage: fileops clean FILE"
+                return 1
+            fi
+            local tmp="/tmp/tmp_$$"
+            perl -nlwe 'tr/ //d; print if length' "$1" > "$tmp"
+            mv "$tmp" "$1"
+            ;;
+        compress)
+            # Compress PDF
+            if [ -z "$1" ] || [ -z "$2" ]; then
+                echo "Usage: fileops compress INPUT.pdf OUTPUT.pdf"
+                return 1
+            fi
+            gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dNOPAUSE \
+               -dBATCH -dQUIET -sOutputFile="$2" "$1"
+            ;;
+        *)
+            echo "Usage: fileops [lowercase|duplicate|swap|random|clean|compress] [args]"
+            ;;
+    esac
+}
+
+#=============================================================
+# SYSTEM MANAGEMENT FUNCTIONS
+#=============================================================
+
+sys() {
+    local operation="$1"
+    shift
+    
+    # Detect package manager
+    local pkg_manager
+    if command -v pacman &>/dev/null; then
+        pkg_manager="pacman"
+    elif command -v apt &>/dev/null; then
+        pkg_manager="apt"
+    elif command -v dnf5 &>/dev/null; then
+        pkg_manager="dnf5"
+    elif command -v dnf &>/dev/null; then
+        pkg_manager="dnf"
+    elif command -v zypper &>/dev/null; then
+        pkg_manager="zypper"
     else
-        alias moo='fortune'  # Just fortune if no cowsay
+        pkg_manager="unknown"
     fi
-else
-    alias fortune='echo "Fortune not installed"'
-    alias moo='echo "🐄 Moo! (Install fortune and cowsay for the full experience)"'
-fi
+    
+    case "$operation" in
+        search)
+            # Search for packages
+            case "$pkg_manager" in
+                apt)      apt search "$1" ;;
+                pacman)   pacman -Ss "$1" ;;
+                dnf*)     $pkg_manager search "$1" ;;
+                zypper)   zypper search "$1" ;;
+                *)        echo "Unsupported package manager" ;;
+            esac
+            ;;
+        install)
+            # Install packages
+            case "$pkg_manager" in
+                apt)      sudo apt update && sudo apt install -y "$@" && sudo apt clean ;;
+                pacman)   sudo pacman -S --noconfirm "$@" && sudo pacman -Scc --noconfirm ;;
+                dnf*)     sudo $pkg_manager install -y "$@" && sudo $pkg_manager clean all ;;
+                zypper)   sudo zypper install -y "$@" && sudo zypper clean --all ;;
+                *)        echo "Unsupported package manager" ;;
+            esac
+            ;;
+        upgrade)
+            # System upgrade
+            case "$pkg_manager" in
+                apt)
+                    sudo apt update
+                    sudo apt full-upgrade -y
+                    sudo apt autoremove --purge -y
+                    sudo apt clean
+                    ;;
+                pacman)
+                    sudo pacman -Syu --noconfirm
+                    orphans=$(pacman -Qtdq 2>/dev/null)
+                    [ -n "$orphans" ] && sudo pacman -Rns --noconfirm $orphans
+                    sudo pacman -Scc --noconfirm
+                    ;;
+                dnf*)
+                    sudo $pkg_manager upgrade --refresh -y
+                    sudo $pkg_manager autoremove -y
+                    sudo $pkg_manager clean all
+                    ;;
+                zypper)
+                    sudo zypper refresh
+                    sudo zypper update -y
+                    sudo zypper remove -u
+                    sudo zypper clean --all
+                    ;;
+                *)
+                    echo "Unsupported package manager"
+                    ;;
+            esac
+            ;;
+        *)
+            echo "Usage: sys [search|install|upgrade] [args]"
+            ;;
+    esac
+}
 
 #=============================================================
-# DEVELOPMENT TOOLS
+# UTILITY FUNCTIONS
 #=============================================================
 
-# Git shortcuts (basic - you probably have more in git config)
-alias g='git'
-alias gs='git status'
-alias ga='git add'
-alias gc='git commit'
-alias gp='git push'
-alias gl='git log --oneline --graph --decorate'
-
-# Python
-alias py='python3'
-alias pip='pip3'
-alias venv='python3 -m venv'
-alias activate='source ./venv/bin/activate'
-
-# Rust/Cargo shortcuts
-if command -v cargo &>/dev/null; then
-    alias cb='cargo build'
-    alias cr='cargo run'
-    alias ct='cargo test'
-    alias cc='cargo check'
-    alias cup='cargo update'
-    alias cin='cargo install'
-fi
-
-#=============================================================
-# SYSTEM MONITORING
-#=============================================================
-
-alias ports='netstat -tulanp 2>/dev/null || ss -tulanp'
-alias listening='netstat -an | grep LISTEN'
-alias meminfo='free -h'
-alias cpuinfo='lscpu'
-alias diskinfo='df -h'
-alias mountinfo='mount | column -t'
-
-#=============================================================
-# QUICK EDITS (add your own config files)
-#=============================================================
-
-alias bashrc='vim ~/.bashrc'
-alias bashaliases='vim ~/.bash_aliases'
-alias bashfunctions='vim ~/.bash_functions'
-alias vimrc='vim ~/.vimrc'
-alias gitconfig='vim ~/.gitconfig'
-
-# Fish config (when in bash but want to edit fish)
-alias fishconfig='vim ~/.config/fish/config.fish'
-alias fishaliases='vim ~/.config/fish/conf.d/aliases.fish'
-
-#=============================================================
-# ARCH/PACMAN SPECIFIC (if on Arch-based system)
-#=============================================================
-
-if command -v pacman &>/dev/null; then
-    alias pacup='sudo pacman -Syu'
-    alias pacin='sudo pacman -S'
-    alias pacrem='sudo pacman -Rns'
-    alias pacsearch='pacman -Ss'
-    alias pacinfo='pacman -Si'
-    alias pacfiles='pacman -Ql'
-    alias pacorphans='pacman -Qtdq'
-    alias pacclean='sudo pacman -Scc'
-fi
+utils() {
+    local operation="$1"
+    shift
+    
+    case "$operation" in
+        epoch)
+            # Convert epoch to readable date
+            date --date="@$1"
+            ;;
+        words)
+            # Generate word list
+            fortune -l -n 145 | tr '[:lower:]' '[:upper:]' | \
+                tr ' ' '\n' | sed 's/[^A-Z]//g' | grep -E '.{5}' | sort -u | shuf
+            ;;
+        pony)
+            # Pony say
+            if command -v ponysay &>/dev/null; then
+                fortune | ponysay
+            elif command -v cowsay &>/dev/null; then
+                fortune | cowsay
+            else
+                fortune
+            fi
+            ;;
+        guid)
+            # Generate GUIDs
+            local count="${1:-1}"
+            for ((i=1; i<=count; i++)); do
+                uuidgen -r | tr '[:lower:]' '[:upper:]'
+            done
+            ;;
+        random)
+            # Random numbers
+            case "$1" in
+                3)  echo $((100 + RANDOM % 900)) ;;
+                5)  echo $((10000 + RANDOM % 90000)) ;;
+                *)  echo $RANDOM ;;
+            esac
+            ;;
+        desktop)
+            # Show desktop info
+            echo "Desktop: $XDG_CURRENT_DESKTOP"
+            echo "Session: $GDMSESSION"
+            ;;
+        pid)
+            # Show process info
+            top -p $(pgrep -d , "$1")
+            ;;
+        *)
+            echo "Usage: utils [epoch|words|pony|guid|random|desktop|pid] [args]"
+            ;;
+    esac
+}
 
 #=============================================================
-# MODERN CLI TOOLS (if installed)
+# SEARCH FUNCTIONS
 #=============================================================
 
-# Modern replacements for standard tools
-command -v bat &>/dev/null && alias cat='bat'
-command -v rg &>/dev/null && alias grep='rg'
-command -v fd &>/dev/null && alias find='fd'
-command -v dust &>/dev/null && alias du='dust'
-command -v duf &>/dev/null && alias df='duf'
-command -v btm &>/dev/null && alias top='btm'
-command -v procs &>/dev/null && alias ps='procs'
-command -v sd &>/dev/null && alias sed='sd'
+finder() {
+    local operation="$1"
+    shift
+    
+    case "$operation" in
+        name)
+            # Find by name
+            find . -type f -iname "*$1*" -ls
+            ;;
+        exec)
+            # Find and execute
+            local pattern="$1"
+            shift
+            find . -type f -iname "*$pattern*" -exec "$@" {} \;
+            ;;
+        content)
+            # Find by content
+            local case_flag=""
+            local pattern
+            local ext="*"
+            
+            if [ "$1" = "-i" ]; then
+                case_flag="-i"
+                shift
+            fi
+            
+            pattern="$1"
+            [ -n "$2" ] && ext="$2"
+            
+            find . -type f -name "$ext" -print0 | \
+                xargs -0 grep --color=always -sn $case_flag "$pattern" 2>/dev/null | more
+            ;;
+        *)
+            echo "Usage: finder [name|exec|content] [args]"
+            ;;
+    esac
+}
+
+#=============================================================
+# ARCHIVE FUNCTIONS
+#=============================================================
+
+archive() {
+    local operation="$1"
+    shift
+    
+    case "$operation" in
+        extract)
+            # Extract archives
+            extract "$1"  # Use the extract function defined above
+            ;;
+        encrypt)
+            # Encrypt file
+            if [ -z "$1" ] || [ -z "$2" ]; then
+                echo "Usage: archive encrypt INPUT OUTPUT"
+                return 1
+            fi
+            openssl des3 -salt -in "$1" -out "$2"
+            ;;
+        decrypt)
+            # Decrypt file
+            if [ -z "$1" ] || [ -z "$2" ]; then
+                echo "Usage: archive decrypt INPUT OUTPUT"
+                return 1
+            fi
+            openssl des3 -d -in "$1" -out "$2"
+            ;;
+        *)
+            echo "Usage: archive [extract|encrypt|decrypt] [args]"
+            ;;
+    esac
+}
+
+#=============================================================
+# VIM INSTALLATION FUNCTIONS (System Compilation Test)
+#=============================================================
+
+install_vim() {
+    echo "Installing/updating Vim from source..."
+    
+    # Install dependencies
+    sudo apt update && \
+    sudo apt install -y \
+        libncurses5-dev libgtk2.0-dev libatk1.0-dev \
+        libcairo2-dev libx11-dev libxpm-dev libxt-dev \
+        python3-dev ruby-dev lua5.3 liblua5.3-dev \
+        libperl-dev git build-essential cmake clang \
+        libclang-dev
+    
+    # Clean existing installations
+    sudo apt purge -y vim vim-runtime gvim vim-tiny vim-common vim-gui-common vim-nox
+    sudo apt autoremove -y
+    
+    # Set up source directory
+    local vim_src="$HOME/src/vim"
+    [ ! -d "$vim_src" ] && git clone https://github.com/vim/vim.git "$vim_src"
+    
+    # Update repository
+    cd "$vim_src" || return 1
+    git pull --rebase
+    git submodule update --init --recursive
+    
+    # Clean build
+    make clean distclean
+    
+    # Configure with optimal settings
+    ./configure \
+        --with-features=huge \
+        --enable-multibyte \
+        --enable-rubyinterp=yes \
+        --with-x \
+        --enable-perlinterp=yes \
+        --enable-luainterp=yes \
+        --enable-gui=gtk2 \
+        --enable-cscope \
+        --prefix=/usr/local \
+        --enable-python3interp=yes \
+        --with-python3-config-dir="$(python3-config --configdir)" \
+        --with-python3-command=python3
+    
+    # Build and install
+    make && sudo make install
+    
+    # Set as default editor
+    sudo update-alternatives --install /usr/bin/editor editor /usr/local/bin/vim 1
+    sudo update-alternatives --set editor /usr/local/bin/vim
+    sudo update-alternatives --install /usr/bin/vi vi /usr/local/bin/vim 1
+    sudo update-alternatives --set vi /usr/local/bin/vim
+    
+    echo "Vim installation completed."
+}
+
+install_ycm() {
+    echo "Setting up YouCompleteMe..."
+    
+    # Install dependencies
+    sudo apt install -y \
+        mono-complete openjdk-17-jdk \
+        shellcheck golang nodejs npm
+    
+    # Update npm
+    npm install -g npm@latest
+    
+    # Install/update YCM
+    local ycm_dir="$HOME/.vim/bundle/YouCompleteMe"
+    if [ ! -d "$ycm_dir" ]; then
+        vim +PluginInstall +qall
+    else
+        vim +PluginUpdate +qall
+    fi
+    
+    # Build YCM
+    cd "$ycm_dir" || return 1
+    python3 install.py --all
+    
+    echo "YouCompleteMe setup completed."
+}
+
+install_warzone2100() {
+    cd "$HOME/src" || return 1
+    local wz_src="$HOME/src/warzone2100"
+    
+    # Clone or update repository
+    if [ ! -d "$wz_src" ]; then
+        git clone --recurse-submodules --depth 1 \
+            https://github.com/Warzone2100/warzone2100 "$wz_src"
+    fi
+    
+    # Build and install
+    cd "$wz_src" || return 1
+    git remote update -p
+    git merge --ff-only '@{u}'
+    git submodule update --init --recursive
+    
+    sudo ./get-dependencies_linux.sh ubuntu build-all
+    
+    mkdir -p build
+    cd build || return 1
+    cmake \
+        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+        -DCMAKE_INSTALL_PREFIX:PATH=/opt/warzone2100-latest \
+        -GNinja ..
+    
+    sudo cmake --build . --target install
+    cd || return
+}
+
+#=============================================================
+# BACKWARD COMPATIBILITY ALIASES
+#=============================================================
+
+# Media function shortcuts
+ripytsong() { media rip "$@"; }
+pullytaudio() { media audio "$@"; }
+bestytclip() { media video "$@"; }
+louder() { media louder "$@"; }
+wav2mp3() { media convert mp3; }
+ogg2mp3() { media convert mp3; }
+shrinkMP3() { media compress "$@"; }
+toonzes() { media play "$@"; }
+
+# Image function shortcuts
+maxwidthvar() { img resize "$@"; }
+jpgclearmeta() { img clean; }
+jpgtiny() { img thumb; }
+jpegthumbs() { img thumb 150x100; }
+favico() { img favicon "$@"; }
+
+# File operation shortcuts
+lowercase() { fileops lowercase "$@"; }
+dupe() { fileops duplicate "$@"; }
+swap() { fileops swap "$@"; }
+dummyfile() { fileops random "$1" "$2"; }
+plugdummy() { fileops random "$2" "$1"; }
+noblanks() { fileops clean "$@"; }
+smushpdf() { fileops compress "$@"; }
+
+# System shortcuts
+tellme() { sys search "$@"; }
+gimme() { sys install "$@"; }
+iago() { sys upgrade; }
+
+# Utility shortcuts
+epoch() { utils epoch "$@"; }
+wordlist() { utils words; }
+ponies() { utils pony; }
+guidmaker() { utils guid "$@"; }
+3digit() { utils random 3; }
+5digit() { utils random 5; }
+wutdt() { utils desktop; }
+gettoppid() { utils pid "$@"; }
+
+# Search shortcuts
+ff() { finder name "$@"; }
+fe() { finder exec "$@"; }
+fstr() { finder content "$@"; }
+
+# Archive shortcuts
+pfimpf() { archive extract "$@"; }
+scramble() { archive encrypt "$@"; }
+descramble() { archive decrypt "$@"; }
+
+# Warzone shortcut
+wz() { install_warzone2100; }
 
 #=============================================================
 # HELP FUNCTION
 #=============================================================
 
-alias-help() {
-    echo "🐚 Bash Aliases Help"
-    echo "==================="
+function-help() {
+    echo "🐚 Bash Functions Help"
+    echo "====================="
     echo ""
-    echo "Navigation:"
-    echo "  .., ..., ....  - Go up directories"
-    echo "  cs PATH        - cd and ls combined"
+    echo "Main Functions:"
+    echo "  media [operation] - Audio/video processing"
+    echo "  img [operation]   - Image processing"
+    echo "  fileops [op]      - File operations"
+    echo "  sys [operation]   - System management"
+    echo "  utils [operation] - Utilities"
+    echo "  finder [op]       - Search functions"
+    echo "  archive [op]      - Archive operations"
     echo ""
-    echo "Listing (eza):"
-    echo "  ls, l, ll, la  - Various listing formats"
-    echo "  lt, lk, lx     - Sort by time, size, extension"
-    echo "  ltree          - Tree view"
-    echo "  ldir, lfile    - Directories or files only"
+    echo "System Tests:"
+    echo "  install_vim       - Compile Vim from source"
+    echo "  install_ycm       - Install YouCompleteMe"
+    echo "  install_warzone2100 - Install Warzone 2100"
     echo ""
-    echo "Fun Stuff:"
-    echo "  moo            - Random cowsay fortune"
-    echo "  randumb        - Random number"
-    echo "  coinflip       - Heads or tails"
-    echo "  dice           - Roll a die"
+    echo "Quick Functions:"
+    echo "  cs PATH          - cd and ls"
+    echo "  mkcd PATH        - mkdir and cd"
+    echo "  extract FILE     - Extract any archive"
+    echo "  backup FILE      - Quick backup with timestamp"
     echo ""
-    echo "Type 'alias' to see all defined aliases"
+    echo "Legacy Shortcuts:"
+    echo "  ripytsong, pullytaudio, bestytclip"
+    echo "  jpgclearmeta, jpgtiny, favico"
+    echo "  tellme, gimme, iago"
+    echo "  ponies, guidmaker, wordlist"
+    echo ""
+    echo "Type 'declare -F' to see all functions"
 }
 
 #=============================================================
-# LOAD PERSONAL ALIASES
+# LOAD PERSONAL FUNCTIONS
 #=============================================================
 
-# Load personal aliases if they exist
-if [ -f ~/.bash_aliases_personal ]; then
-    source ~/.bash_aliases_personal
+# Load personal functions if they exist
+if [ -f ~/.bash_functions_personal ]; then
+    source ~/.bash_functions_personal
 fi
