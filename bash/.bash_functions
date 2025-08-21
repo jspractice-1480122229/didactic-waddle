@@ -114,7 +114,9 @@ media() {
             local output_dir="${format}_version"
             mkdir -p "$output_dir"
             
-            for f in *.{wav,ogg,flac} 2>/dev/null; do
+            # Use shell globbing properly in Bash
+            shopt -s nullglob  # Don't iterate if no matches
+            for f in *.wav *.ogg *.flac; do
                 [ -f "$f" ] || continue
                 local base="${f%.*}"
                 case "$format" in
@@ -123,6 +125,7 @@ media() {
                     *)    echo "Unsupported format: $format" && return 1 ;;
                 esac
             done
+            shopt -u nullglob  # Reset to default
             ;;
         play)
             # Play random audio files
@@ -151,15 +154,18 @@ img() {
             local width="${1:-800}"
             local quality="${2:-60}"
             
-            for f in *.{jpg,jpeg,png,gif,bmp} 2>/dev/null; do
+            # Use shell globbing properly in Bash
+            shopt -s nullglob  # Don't iterate if no matches
+            for f in *.jpg *.jpeg *.png *.gif *.bmp; do
                 [ -f "$f" ] || continue
                 local base="${f%.*}"
                 local ext="${f##*.}"
                 
-                magick "$f" -resize "${width}x>" -quality "$quality" "/tmp/tmp_$$.$ext"
-                cwebp -q "$quality" -m 6 -mt "/tmp/tmp_$$.$ext" -o "resized_${base}.webp"
-                rm "/tmp/tmp_$$.$ext"
+                magick "$f" -resize "${width}x>" -quality "$quality" "/tmp/tmp_$.$ext"
+                cwebp -q "$quality" -m 6 -mt "/tmp/tmp_$.$ext" -o "resized_${base}.webp"
+                rm "/tmp/tmp_$.$ext"
             done
+            shopt -u nullglob  # Reset to default
             ;;
         clean)
             # Clean JPEG metadata
