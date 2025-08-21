@@ -1,0 +1,230 @@
+# ============================================================
+# FILE: ~/.bash_functions_personal
+# Personal/machine-specific functions for Bash
+# ============================================================
+
+#=============================================================
+# CUSTOM FUNCTIONS
+#=============================================================
+
+# Example: Project-specific build function
+build_my_project() {
+    local project_dir="$HOME/projects/myproject"
+    if [ ! -d "$project_dir" ]; then
+        echo "Project directory not found: $project_dir"
+        return 1
+    fi
+    
+    cd "$project_dir" || return 1
+    echo "Building project..."
+    make clean
+    make
+    make test
+    echo "Build complete!"
+}
+
+# Example: Custom deployment function
+deploy_to_server() {
+    local server="${1:-production}"
+    local branch="${2:-main}"
+    
+    echo "Deploying branch $branch to $server..."
+    
+    case "$server" in
+        production)
+            ssh user@prod.example.com "cd /app && git pull origin $branch && npm install && pm2 restart app"
+            ;;
+        staging)
+            ssh user@staging.example.com "cd /app && git pull origin $branch && npm install && pm2 restart app"
+            ;;
+        *)
+            echo "Unknown server: $server"
+            return 1
+            ;;
+    esac
+}
+
+# Example: Database backup function
+backup_databases() {
+    local backup_dir="$HOME/backups/databases"
+    local timestamp=$(date +%Y%m%d_%H%M%S)
+    
+    mkdir -p "$backup_dir"
+    
+    # PostgreSQL backup
+    if command -v pg_dump &>/dev/null; then
+        echo "Backing up PostgreSQL..."
+        pg_dump -U postgres mydb > "$backup_dir/postgres_${timestamp}.sql"
+    fi
+    
+    # MySQL backup
+    if command -v mysqldump &>/dev/null; then
+        echo "Backing up MySQL..."
+        mysqldump -u root -p mydb > "$backup_dir/mysql_${timestamp}.sql"
+    fi
+    
+    echo "Backups saved to $backup_dir"
+}
+
+# Example: Clean development environment
+clean_dev_env() {
+    echo "Cleaning development environment..."
+    
+    # Clean Podman if available
+    if command -v podman &>/dev/null; then
+        echo "Cleaning Podman..."
+        podman system prune -af
+        # Also clean up build cache
+        podman rmi --prune
+    fi
+    
+    # Clean npm cache
+    if command -v npm &>/dev/null; then
+        echo "Cleaning npm cache..."
+        npm cache clean --force
+    fi
+    
+    # Clean pip cache
+    if command -v pip3 &>/dev/null; then
+        echo "Cleaning pip cache..."
+        pip3 cache purge
+    fi
+    
+    # Clean cargo cache
+    if command -v cargo &>/dev/null; then
+        echo "Cleaning cargo cache..."
+        cargo cache -a
+    fi
+    
+    echo "Cleanup complete!"
+}
+
+# Example: Quick note-taking function
+note() {
+    local notes_dir="$HOME/Documents/notes"
+    local date=$(date +%Y-%m-%d)
+    
+    mkdir -p "$notes_dir"
+    
+    if [ -z "$1" ]; then
+        # Open today's note for editing
+        vim "$notes_dir/${date}.md"
+    else
+        # Append note with timestamp
+        echo "[$(date +%H:%M:%S)] $*" >> "$notes_dir/${date}.md"
+        echo "Note added to $notes_dir/${date}.md"
+    fi
+}
+
+# Example: Search through all your code
+codesearch() {
+    local pattern="$1"
+    local path="${2:-$HOME/projects}"
+    
+    if [ -z "$pattern" ]; then
+        echo "Usage: codesearch PATTERN [PATH]"
+        return 1
+    fi
+    
+    # Use ripgrep if available, otherwise fall back to grep
+    if command -v rg &>/dev/null; then
+        rg --type-add 'code:*.{js,ts,py,rb,go,rs,c,cpp,h,java,php,sh,bash,fish}' \
+           --type code "$pattern" "$path"
+    else
+        grep -r --include="*.{js,ts,py,rb,go,rs,c,cpp,h,java,php,sh,bash,fish}" \
+             "$pattern" "$path"
+    fi
+}
+
+# Example: Monitor system resources
+sysmon() {
+    echo "=== System Monitor ==="
+    echo ""
+    echo "CPU Usage:"
+    top -bn1 | grep "Cpu(s)" | awk '{print "  " $2 " user, " $4 " system"}'
+    echo ""
+    echo "Memory Usage:"
+    free -h | awk '/^Mem:/ {print "  Total: " $2 ", Used: " $3 ", Free: " $4}'
+    echo ""
+    echo "Disk Usage:"
+    df -h / | awk 'NR==2 {print "  Total: " $2 ", Used: " $3 ", Free: " $4 ", Use%: " $5}'
+    echo ""
+    echo "Top 5 CPU Processes:"
+    ps aux | sort -nrk 3,3 | head -n 6 | tail -n 5 | awk '{print "  " $11 " (" $3 "%)"}'
+    echo ""
+    echo "Top 5 Memory Processes:"
+    ps aux | sort -nrk 4,4 | head -n 6 | tail -n 5 | awk '{print "  " $11 " (" $4 "%)"}'
+    
+    # Add Podman container info if available
+    if command -v podman &>/dev/null; then
+        echo ""
+        echo "Podman Containers:"
+        podman ps --format "  {{.Names}}: {{.Status}}" 2>/dev/null || echo "  No containers running"
+    fi
+}
+
+# Podman-specific helper functions
+pod_cleanup() {
+    echo "Cleaning up Podman environment..."
+    
+    # Stop all running containers
+    local running=$(podman ps -q)
+    if [ -n "$running" ]; then
+        echo "Stopping running containers..."
+        podman stop $running
+    fi
+    
+    # Remove all stopped containers
+    local stopped=$(podman ps -aq)
+    if [ -n "$stopped" ]; then
+        echo "Removing stopped containers..."
+        podman rm $stopped
+    fi
+    
+    # Remove dangling images
+    echo "Removing dangling images..."
+    podman image prune -f
+    
+    # Clean build cache and system
+    echo "Cleaning system..."
+    podman system prune -af --volumes
+    
+    echo "Podman cleanup complete!"
+}
+
+# Quick podman run with common options
+podrun() {
+    local image="${1:-ubuntu:latest}"
+    shift
+    echo "Running $image interactively..."
+    podman run -it --rm "$image" "$@"
+}
+
+# Inspect podman resource usage
+pod_stats() {
+    echo "Podman Resource Usage:"
+    podman stats --no-stream
+}
+
+# Quick container shell access
+podshell() {
+    local container="$1"
+    local shell="${2:-/bin/bash}"
+    
+    if [ -z "$container" ]; then
+        echo "Usage: podshell CONTAINER [SHELL]"
+        echo "Available containers:"
+        podman ps --format "table {{.Names}}\t{{.Status}}"
+        return 1
+    fi
+    
+    podman exec -it "$container" "$shell"
+}
+
+#=============================================================
+# NOTES / REMINDERS
+#=============================================================
+
+# You can add reminders or notes to yourself here
+# echo "🔔 Remember to check the backup status today!"
+# echo "📝 TODO: Finish the report by Friday"
