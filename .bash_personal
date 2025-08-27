@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# FILE: ~/.bash_personal
+# Sourced by .bashrc. Put your personal aliases, functions, and exports here.
+
+# -- ALIASES --
+# alias my-server='ssh user@my-server.com'
+# alias aye='cd ~/projects/my-project && podman-compose up -d'
+
+# -- EXPORTS --
+# Be careful with committing secrets to version control!
+# export OPENAI_API_KEY="sk-..."
+# export GITHUB_TOKEN="ghp_..."
+
+# -- FUNCTIONS --
+# function backup_database() {
+#     echo "Backing up my_database..."
+#     pg_dump -U myuser -h localhost my_database > "$HOME/backups/db_$(date +%F).sql"
+# }
