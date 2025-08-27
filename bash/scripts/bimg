@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# Standalone script for image processing
+
+if [ -z "$1" ]; then
+    echo "Usage: bimg [resize|clean|thumb|favicon] [args]"
+    exit 1
+fi
+
+operation="$1"; shift
+
+# Helper to make shell globbing safer in functions
+safer_glob() {
+    trap 'shopt -u nullglob' RETURN
+    shopt -s nullglob
+}
+
+case "$operation" in
+    resize)
+        width="${1:-800}"; quality="${2:-60}"
+        safer_glob
+        for f in *.jpg *.jpeg *.png *.gif *.bmp; do
+            base="${f%.*}"
+            magick "$f" -resize "${width}x>" -quality "$quality" "resized_${base}.webp"
+        done ;;
+    clean) for f in *.jpg; do [ -f "$f" ] && jpegoptim -pqt --strip-all "$f"; done ;;
+    thumb)
+        size="${1:-48x38}"
+        for f in *.jpg; do [ -f "$f" ] && convert -sample "$size" "$f" "thumb_${f%.*}.jpg"; done ;;
+    favicon)
+        if [ -z "$1" ]; then echo "Usage: bimg favicon INPUT [OUTPUT]"; exit 1; fi
+        output="${2:-favicon.ico}"
+        magick convert "$1" -resize 16x16 -gravity center -crop 16x16+0+0 -flatten -colors 256 -background transparent "$output" ;;
+    *) echo "Unknown operation: $operation" ;;
+esac

@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Standalone script for utilities
+
+if [ -z "$1" ]; then
+    echo "Usage: butils [epoch|words|pony|guid|random|desktop|pid] [args]"
+    exit 1
+fi
+
+operation="$1"; shift
+
+case "$operation" in
+    epoch) date --date="@$1" ;;
+    words) fortune -l -n 145 | tr '[:lower:]' '[:upper:]' | tr ' ' '\n' | sed 's/[^A-Z]//g' | grep -E '.{5}' | sort -u | shuf ;;
+    pony) if command -v ponysay &>/dev/null; then fortune | ponysay; elif command -v cowsay &>/dev/null; then fortune | cowsay; else fortune; fi ;;
+    guid) local count="${1:-1}"; for ((i=1; i<=count; i++)); do uuidgen -r | tr '[:lower:]' '[:upper:]'; done ;;
+    random) case "$1" in 3) echo $((100 + RANDOM % 900)) ;; 5) echo $((10000 + RANDOM % 90000)) ;; *) echo $RANDOM ;; esac ;;
+    desktop) echo "Desktop: $XDG_CURRENT_DESKTOP / Session: $GDMSESSION" ;;
+    pid) top -p "$(pgrep -d , "$1")" ;;
+    *) echo "Unknown operation: $operation" ;;
+esac

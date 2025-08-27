@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Standalone script for media processing
+
+if [ -z "$1" ]; then
+    echo "Usage: bmedia [rip|audio|video|louder|compress|convert|play] [args]"
+    exit 1
+fi
+
+operation="$1"; shift
+
+# Helper to make shell globbing safer in functions
+safer_glob() {
+    trap 'shopt -u nullglob' RETURN
+    shopt -s nullglob
+}
+
+case "$operation" in
+    rip) yt-dlp -f bestaudio --extract-audio --prefer-ffmpeg --audio-format m4a --embed-thumbnail --add-metadata -o '%(title)s.%(ext)s' "$@" ;;
+    audio) yt-dlp -f bestaudio "$@" ;;
+    video) yt-dlp -f best "$@" ;;
+    louder)
+        if [ -z "$1" ]; then echo "Usage: bmedia louder FILE.mp3"; exit 1; fi
+        lame --scale 2 "$1" "/tmp/tmp_$$.mp3" && mv "/tmp/tmp_$$.mp3" "$1" ;;
+    compress)
+        output_dir="${2:-compressed}"; mkdir -p "$output_dir"
+        for f in *.mp3; do [ -f "$f" ] && ffmpeg -n -i "$f" -ac 1 -ab 40k -ar 22050 "$output_dir/$f"; done ;;
+    convert)
+        format="${1:-mp3}"; output_dir="${format}_version"; mkdir -p "$output_dir"
+        safer_glob
+        for f in *.wav *.ogg *.flac; do
+            ffmpeg -i "$f" -vn -ar 44100 -ac 2 -b:a 192k "$output_dir/${f%.*}.$format"
+        done ;;
+    play)
+        dir="${1:-.}"; while IFS= read -r f; do ffplay -autoexit -nodisp "$f" >/dev/null 2>&1; done < <(find "$dir" -type f \( -iname "*.mp3" -o -iname "*.flac" -o -iname "*.wav" \) | shuf) ;;
+    *) echo "Unknown operation: $operation" ;;
+esac
