@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Standalone script for file operations
+
+if [ -z "$1" ]; then
+    echo "Usage: bfileops [lowercase|duplicate|swap|random|clean|compress] [args]"
+    exit 1
+fi
+
+operation="$1"; shift
+
+case "$operation" in
+    lowercase) for f in "$@"; do local new; new=$(echo "$f" | tr '[:upper:]' '[:lower:]'); if [ "$f" != "$new" ]; then mv -- "$f" "$new"; fi; done ;;
+    duplicate)
+        if [ -z "$1" ] || [ -z "$2" ]; then echo "Usage: bfileops duplicate FILE COUNT"; exit 1; fi
+        for ((i=1; i<=$2; i++)); do cp "$1" "${i}${1}"; done ;;
+    swap)
+        if [ -z "$1" ] || [ -z "$2" ]; then echo "Usage: bfileops swap FILE1 FILE2"; exit 1; fi
+        local tmp="/tmp/tmp_$$"; mv -- "$1" "$tmp"; mv -- "$2" "$1"; mv -- "$tmp" "$2" ;;
+    random) if [ "$1" = "binary" ]; then dd if=/dev/urandom of="$2" bs="$3" count=1; else head -c "$2" </dev/urandom > "$1"; fi ;;
+    clean)
+        if [ -z "$1" ]; then echo "Usage: bfileops clean FILE"; exit 1; fi
+        local tmp="/tmp/tmp_$$"; perl -nlwe 'tr/ //d; print if length' "$1" > "$tmp"; mv "$tmp" "$1" ;;
+    compress)
+        if [ -z "$1" ] || [ -z "$2" ]; then echo "Usage: bfileops compress INPUT.pdf OUTPUT.pdf"; exit 1; fi
+        gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dNOPAUSE -dBATCH -dQUIET -sOutputFile="$2" "$1" ;;
+    *) echo "Unknown operation: $operation" ;;
+esac

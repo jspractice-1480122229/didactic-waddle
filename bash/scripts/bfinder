@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Standalone script for search functions
+
+if [ -z "$1" ]; then
+    echo "Usage: bfinder [name|exec|content] [args]"
+    exit 1
+fi
+
+operation="$1"; shift
+
+case "$operation" in
+    name) find . -type f -iname "*$1*" -ls ;;
+    exec) find . -type f -iname "*$1*" -exec "$@" {} \; ;;
+    content)
+        case_flag=""; pattern=""; ext="*"
+        if [ "$1" = "-i" ]; then case_flag="-i"; shift; fi
+        pattern="$1"; [ -n "$2" ] && ext="$2"
+        find . -type f -name "$ext" -print0 | xargs -0 grep --color=always -sn $case_flag "$pattern" 2>/dev/null | more ;;
+    *) echo "Unknown operation: $operation" ;;
+esac
