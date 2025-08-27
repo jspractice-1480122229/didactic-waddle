@@ -246,7 +246,7 @@ EOL
 
     # Install modern CLI tools via cargo
     log_info "Installing/updating modern CLI tools via cargo..."
-    local rust_tools=("eza" "bat" "ripgrep" "fd-find" "sd" "dust" "procs" "bottom" "zoxide" "starship")
+    local rust_tools=("eza" "bat" "ripgrep" "fd-find" "sd" "du-dust" "procs" "bottom" "zoxide" "starship")
     cargo install "${rust_tools[@]}"
 
     # Install ponysay if not found
