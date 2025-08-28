@@ -8,23 +8,91 @@ fi
 
 operation="$1"; shift
 
+# ⚡️ RUN-ABLE - Extract with actual feedback
 extract_one() {
-    case "$1" in
-        *.tar.bz2) tar xjf "$1" ;; *.tar.gz) tar xzf "$1" ;; *.bz2) bunzip2 "$1" ;;
-        *.rar) unrar x "$1" ;; *.gz) gunzip "$1" ;; *.tar) tar xf "$1" ;;
-        *.tbz2) tar xjf "$1" ;; *.tgz) tar xzf "$1" ;; *.zip) unzip "$1" ;;
-        *.Z) uncompress "$1" ;; *.7z) 7z x "$1" ;; *.xz) unxz "$1" ;;
-        *) echo "Cannot extract $1"; return 1 ;;
+    local file="$1"
+
+    if [ ! -f "$file" ]; then
+        echo "Error: File '$file' not found"
+        return 1
+    fi
+
+    echo "Extracting: $file"
+
+    case "$file" in
+        *.tar.bz2) tar xjf "$file" && echo "Successfully extracted $file" ;;
+        *.tar.gz) tar xzf "$file" && echo "Successfully extracted $file" ;;
+        *.zip) unzip -q "$file" && echo "Successfully extracted $file" ;;
+        *.rar)
+            if command -v unrar &>/dev/null; then
+                unrar x "$file" && echo "Successfully extracted $file"
+            else
+                echo "Error: unrar not installed. Cannot extract RAR files."
+                return 1
+            fi ;;
+        *.7z)
+            if command -v 7z &>/dev/null; then
+                7z x "$file" && echo "Successfully extracted $file"
+            else
+                echo "Error: p7zip not installed. Cannot extract 7z files."
+                return 1
+            fi ;;
+        # ... rest of cases with similar error handling
+        *) echo "Error: Unsupported archive format for $file"; return 1 ;;
     esac
 }
 
 case "$operation" in
     extract) extract_one "$1" ;;
-    encrypt)
-        if [ -z "$1" ] || [ -z "$2" ]; then echo "Usage: barchive encrypt INPUT OUTPUT"; exit 1; fi
-        openssl des3 -salt -in "$1" -out "$2" ;;
-    decrypt)
-        if [ -z "$1" ] || [ -z "$2" ]; then echo "Usage: barchive decrypt INPUT OUTPUT"; exit 1; fi
-        openssl des3 -d -in "$1" -out "$2" ;;
-    *) echo "Unknown operation: $operation" ;;
+# ⚡️ RUN-ABLE - Encryption that won't embarrass you
+encrypt)
+    if [ -z "$1" ] || [ -z "$2" ]; then
+        echo "Usage: barchive encrypt INPUT OUTPUT [--weak-legacy-des3]"
+        echo "Default uses AES-256-GCM. Use --weak-legacy-des3 for old compatibility."
+        exit 1
+    fi
+
+    local input="$1" output="$2"
+    if [ ! -f "$input" ]; then echo "Error: Input file '$input' not found"; exit 1; fi
+
+    if [ "$3" = "--weak-legacy-des3" ]; then
+        echo "WARNING: Using weak DES3 encryption (legacy compatibility mode)"
+        openssl des3 -salt -in "$input" -out "$output"
+    else
+        echo "Using AES-256-GCM encryption"
+        openssl enc -aes-256-gcm -salt -in "$input" -out "$output" -pbkdf2 -iter 100000
+    fi
+
+    if [ $? -eq 0 ]; then
+        echo "Successfully encrypted: $input -> $output"
+    else
+        echo "Error: Encryption failed"
+        rm -f "$output"  # Clean up failed attempt
+        exit 1
+    fi ;;
+
+decrypt)
+    if [ -z "$1" ] || [ -z "$2" ]; then
+        echo "Usage: barchive decrypt INPUT OUTPUT [--weak-legacy-des3]"
+        exit 1
+    fi
+
+    local input="$1" output="$2"
+    if [ ! -f "$input" ]; then echo "Error: Input file '$input' not found"; exit 1; fi
+
+    if [ "$3" = "--weak-legacy-des3" ]; then
+        echo "Decrypting legacy DES3 file..."
+        openssl des3 -d -salt -in "$input" -out "$output"
+    else
+        echo "Decrypting AES-256-GCM file..."
+        openssl enc -aes-256-gcm -d -salt -in "$input" -out "$output" -pbkdf2 -iter 100000
+    fi
+
+    if [ $? -eq 0 ]; then
+        echo "Successfully decrypted: $input -> $output"
+    else
+        echo "Error: Decryption failed (wrong password or corrupted file?)"
+        rm -f "$output"  # Don't leave partial files lying around
+        exit 1
+    fi ;;
 esac

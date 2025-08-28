@@ -1,38 +1,129 @@
 #!/usr/bin/env bash
-# Standalone script for system management
+# ⚡️ RUN-ABLE
+# Standalone script for system management - Improved Edition
 
 if [ -z "$1" ]; then
-    echo "Usage: bsys [search|install|upgrade] [args]"
+    echo "Usage: bsys [search|install|upgrade|info|clean] [args]"
     exit 1
 fi
 
 operation="$1"; shift
-pkg_manager=""
-if command -v pacman &>/dev/null; then pkg_manager="pacman";
-elif command -v apt &>/dev/null; then pkg_manager="apt";
-elif command -v dnf &>/dev/null; then pkg_manager="dnf";
-elif command -v zypper &>/dev/null; then pkg_manager="zypper";
-else echo "Unsupported package manager" && exit 1; fi
+
+# Detect package manager with better error handling
+detect_pkg_manager() {
+    if command -v pacman &>/dev/null; then echo "pacman";
+    elif command -v apt &>/dev/null; then echo "apt";
+    elif command -v dnf &>/dev/null; then echo "dnf";
+    elif command -v zypper &>/dev/null; then echo "zypper";
+    else
+        echo "Error: No supported package manager found" >&2
+        echo "Supported: pacman, apt, dnf, zypper" >&2
+        exit 1
+    fi
+}
+
+pkg_manager=$(detect_pkg_manager)
 
 case "$operation" in
     search)
+        if [ -z "$1" ]; then echo "Usage: bsys search PACKAGE_NAME"; exit 1; fi
+        echo "Searching for packages matching: $*"
         case "$pkg_manager" in
-            apt) apt search "$@" ;; pacman) pacman -Ss "$@" ;;
-            dnf) dnf search "$@" ;; zypper) zypper search "$@" ;;
+            apt) apt search "$@" 2>/dev/null | grep -v "WARNING" | head -20 ;;
+            pacman) pacman -Ss "$@" | head -40 ;;
+            dnf) dnf search "$@" | head -20 ;;
+            zypper) zypper search "$@" | head -20 ;;
         esac ;;
+
     install)
+        if [ -z "$1" ]; then echo "Usage: bsys install PACKAGE1 [PACKAGE2...]"; exit 1; fi
+
+        echo "Installing packages: $*"
+        echo "Package manager: $pkg_manager"
+
+        # Validate package names (basic check)
+        for pkg in "$@"; do
+            if [[ ! "$pkg" =~ ^[a-zA-Z0-9][a-zA-Z0-9._+-]*$ ]]; then
+                echo "Error: Invalid package name '$pkg'"
+                exit 1
+            fi
+        done
+
         case "$pkg_manager" in
-            apt) sudo apt update && sudo apt install -y "$@" ;;
+            apt)
+                echo "Updating package lists..."
+                sudo apt update || { echo "Error: Failed to update package lists"; exit 1; }
+                sudo apt install -y "$@" ;;
             pacman) sudo pacman -S --noconfirm "$@" ;;
             dnf) sudo dnf install -y "$@" ;;
             zypper) sudo zypper install -y "$@" ;;
-        esac ;;
+        esac
+
+        if [ $? -eq 0 ]; then
+            echo "Installation completed successfully"
+        else
+            echo "Installation failed"
+            exit 1
+        fi ;;
+
     upgrade)
+        echo "WARNING: This will perform a full system upgrade!"
+        echo "Package manager: $pkg_manager"
+        echo "Continue? (y/N)"
+        read -r response
+        [[ ! "$response" =~ ^[Yy]$ ]] && { echo "Upgrade cancelled"; exit 0; }
+
+        echo "Starting system upgrade..."
         case "$pkg_manager" in
-            apt) sudo apt update && sudo apt full-upgrade -y && sudo apt autoremove --purge -y ;;
-            pacman) sudo pacman -Syu --noconfirm ;;
-            dnf) sudo dnf upgrade --refresh -y && sudo dnf autoremove -y ;;
-            zypper) sudo zypper refresh && sudo zypper update -y ;;
+            apt)
+                sudo apt update &&
+                sudo apt full-upgrade -y &&
+                sudo apt autoremove --purge -y &&
+                echo "APT upgrade completed" ;;
+            pacman)
+                sudo pacman -Syu --noconfirm &&
+                echo "Pacman upgrade completed" ;;
+            dnf)
+                sudo dnf upgrade --refresh -y &&
+                sudo dnf autoremove -y &&
+                echo "DNF upgrade completed" ;;
+            zypper)
+                sudo zypper refresh &&
+                sudo zypper update -y &&
+                echo "Zypper upgrade completed" ;;
         esac ;;
+
+    info)
+        if [ -z "$1" ]; then echo "Usage: bsys info PACKAGE_NAME"; exit 1; fi
+        echo "Package information for: $1"
+        case "$pkg_manager" in
+            apt) apt show "$1" 2>/dev/null ;;
+            pacman) pacman -Si "$1" 2>/dev/null || pacman -Qi "$1" 2>/dev/null ;;
+            dnf) dnf info "$1" ;;
+            zypper) zypper info "$1" ;;
+        esac ;;
+
+    clean)
+        echo "Cleaning package cache and orphaned packages..."
+        case "$pkg_manager" in
+            apt)
+                sudo apt autoremove --purge -y &&
+                sudo apt autoclean &&
+                echo "APT cleanup completed" ;;
+            pacman)
+                sudo pacman -Sc --noconfirm &&
+                if command -v paru &>/dev/null; then
+                    paru -Sc --noconfirm
+                fi &&
+                echo "Pacman cleanup completed" ;;
+            dnf)
+                sudo dnf autoremove -y &&
+                sudo dnf clean all &&
+                echo "DNF cleanup completed" ;;
+            zypper)
+                sudo zypper clean -a &&
+                echo "Zypper cleanup completed" ;;
+        esac ;;
+
     *) echo "Unknown operation: $operation" ;;
 esac

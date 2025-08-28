@@ -1,27 +1,235 @@
 #!/usr/bin/env bash
-# Standalone script for file operations
+# ⚡️ RUN-ABLE
+# Standalone script for file operations - Improved Edition
 
 if [ -z "$1" ]; then
-    echo "Usage: bfileops [lowercase|duplicate|swap|random|clean|compress] [args]"
+    echo "Usage: bfileops [changecase|duplicate|swap|random|noempties|compress] [args]"
     exit 1
 fi
 
 operation="$1"; shift
 
 case "$operation" in
-    lowercase) for f in "$@"; do local new; new=$(echo "$f" | tr '[:upper:]' '[:lower:]'); if [ "$f" != "$new" ]; then mv -- "$f" "$new"; fi; done ;;
+    changecase)
+        if [ -z "$1" ] || [ -z "$2" ]; then
+            echo "Usage: bfileops changecase CASE_TYPE FILE1 [FILE2...]"
+            echo "Case types: lower, upper, title, sentence, camel, pascal, snake, kebab"
+            exit 1
+        fi
+
+        local case_type="$1"; shift
+        local success=0 skipped=0 failed=0
+
+        for f in "$@"; do
+            if [ ! -e "$f" ]; then
+                echo "Skipped: '$f' (not found)"
+                ((failed++))
+                continue
+            fi
+
+            local new=""
+            local base="${f%.*}" ext="${f##*.}"
+            [ "$base" = "$f" ] && ext=""  # Handle files with no extension
+
+            case "$case_type" in
+                lower) new=$(echo "$f" | tr '[:upper:]' '[:lower:]') ;;
+                upper) new=$(echo "$f" | tr '[:lower:]' '[:upper:]') ;;
+                title) new=$(echo "$f" | sed 's/\b\(.\)/\u\1/g') ;;
+                sentence) new=$(echo "$f" | sed 's/^\(.\)/\u\1/') ;;
+                camel)
+                    # Convert to camelCase: remove spaces/underscores, capitalize after them
+                    new=$(echo "$base" | sed -r 's/[-_ ]+(.)/\U\1/g' | sed 's/^\(.\)/\l\1/')
+                    [ -n "$ext" ] && new="${new}.${ext}"
+                    ;;
+                pascal)
+                    # Convert to PascalCase: like camel but first letter capitalized
+                    new=$(echo "$base" | sed -r 's/[-_ ]+(.)/\U\1/g' | sed 's/^\(.\)/\U\1/')
+                    [ -n "$ext" ] && new="${new}.${ext}"
+                    ;;
+                snake)
+                    # Convert to snake_case
+                    new=$(echo "$base" | sed -r 's/([A-Z])/_\l\1/g' | sed 's/[-. ]/_/g' | sed 's/^_//' | tr '[:upper:]' '[:lower:]')
+                    [ -n "$ext" ] && new="${new}.${ext}"
+                    ;;
+                kebab)
+                    # Convert to kebab-case
+                    new=$(echo "$base" | sed -r 's/([A-Z])/-\l\1/g' | sed 's/[_. ]/-/g' | sed 's/^-//' | tr '[:upper:]' '[:lower:]')
+                    [ -n "$ext" ] && new="${new}.${ext}"
+                    ;;
+                *) echo "Error: Unknown case type '$case_type'"; exit 1 ;;
+            esac
+
+            if [ "$f" = "$new" ]; then
+                echo "Skipped: '$f' (already in $case_type case)"
+                ((skipped++))
+            elif [ -e "$new" ]; then
+                echo "Skipped: '$f' (collision with existing '$new')"
+                ((skipped++))
+            else
+                if mv -- "$f" "$new"; then
+                    echo "Renamed: '$f' -> '$new'"
+                    ((success++))
+                else
+                    echo "Failed: '$f'"
+                    ((failed++))
+                fi
+            fi
+        done
+        echo "Results: $success renamed, $skipped skipped, $failed failed"
+        ;;
+
     duplicate)
-        if [ -z "$1" ] || [ -z "$2" ]; then echo "Usage: bfileops duplicate FILE COUNT"; exit 1; fi
-        for ((i=1; i<=$2; i++)); do cp "$1" "${i}${1}"; done ;;
+        if [ -z "$1" ] || [ -z "$2" ]; then
+            echo "Usage: bfileops duplicate FILE COUNT"
+            exit 1
+        fi
+
+        local file="$1" count="$2"
+        if [ ! -f "$file" ]; then echo "Error: File '$file' not found"; exit 1; fi
+        if ! [[ "$count" =~ ^[0-9]+$ ]] || [ "$count" -gt 50 ]; then
+            echo "Error: Count must be a number between 1-50"
+            exit 1
+        fi
+
+        local base="${file%.*}" ext="${file##*.}"
+        [ "$base" = "$file" ] && ext=""  # Handle files with no extension
+
+        echo "Creating $count copies of '$file'..."
+        for ((i=1; i<=count; i++)); do
+            local output
+            if [ -n "$ext" ]; then
+                output="${base}_copy${i}.${ext}"
+            else
+                output="${file}_copy${i}"
+            fi
+
+            if cp "$file" "$output"; then
+                echo "Created: $output"
+            else
+                echo "Failed to create: $output"
+            fi
+        done ;;
+
     swap)
-        if [ -z "$1" ] || [ -z "$2" ]; then echo "Usage: bfileops swap FILE1 FILE2"; exit 1; fi
-        local tmp="/tmp/tmp_$$"; mv -- "$1" "$tmp"; mv -- "$2" "$1"; mv -- "$tmp" "$2" ;;
-    random) if [ "$1" = "binary" ]; then dd if=/dev/urandom of="$2" bs="$3" count=1; else head -c "$2" </dev/urandom > "$1"; fi ;;
-    clean)
-        if [ -z "$1" ]; then echo "Usage: bfileops clean FILE"; exit 1; fi
-        local tmp="/tmp/tmp_$$"; perl -nlwe 'tr/ //d; print if length' "$1" > "$tmp"; mv "$tmp" "$1" ;;
+        if [ -z "$1" ] || [ -z "$2" ]; then
+            echo "Usage: bfileops swap FILE1 FILE2"
+            exit 1
+        fi
+
+        local file1="$1" file2="$2"
+        if [ ! -f "$file1" ]; then echo "Error: '$file1' not found"; exit 1; fi
+        if [ ! -f "$file2" ]; then echo "Error: '$file2' not found"; exit 1; fi
+        if [ "$file1" -ef "$file2" ]; then echo "Error: Cannot swap file with itself"; exit 1; fi
+
+        local tmp="/tmp/swap_$$_$(basename "$file1")"
+        echo "Swapping: '$file1' <-> '$file2'"
+
+        if mv -- "$file1" "$tmp" && mv -- "$file2" "$file1" && mv -- "$tmp" "$file2"; then
+            echo "Successfully swapped files"
+        else
+            echo "Error: Swap operation failed"
+            # Attempt recovery if possible
+            [ -f "$tmp" ] && mv -- "$tmp" "$file1"
+            exit 1
+        fi ;;
+
+    random)
+        case "$1" in
+            binary)
+                if [ -z "$2" ] || [ -z "$3" ]; then
+                    echo "Usage: bfileops random binary OUTPUT_FILE SIZE_IN_BYTES"
+                    echo "Example: bfileops random binary test.bin 1024"
+                    exit 1
+                fi
+                local output="$2" size="$3"
+                if ! [[ "$size" =~ ^[0-9]+$ ]] || [ "$size" -gt 1073741824 ]; then  # 1GB limit
+                    echo "Error: Size must be a number, max 1GB (1073741824 bytes)"
+                    exit 1
+                fi
+                if [ -f "$output" ]; then
+                    echo "File '$output' exists. Overwrite? (y/N)"
+                    read -r response
+                    [[ ! "$response" =~ ^[Yy]$ ]] && exit 0
+                fi
+                echo "Generating $size bytes of random data..."
+                dd if=/dev/urandom of="$output" bs="$size" count=1 2>/dev/null && echo "Created: $output"
+                ;;
+            text)
+                if [ -z "$2" ] || [ -z "$3" ]; then
+                    echo "Usage: bfileops random text OUTPUT_FILE SIZE_IN_CHARS"
+                    exit 1
+                fi
+                local output="$2" size="$3"
+                if ! [[ "$size" =~ ^[0-9]+$ ]] || [ "$size" -gt 1048576 ]; then  # 1MB text limit
+                    echo "Error: Size must be a number, max 1MB (1048576 chars)"
+                    exit 1
+                fi
+                head -c "$size" </dev/urandom | tr -dc 'a-zA-Z0-9' > "$output"
+                echo "Created random text file: $output ($size chars)"
+                ;;
+            *)
+                echo "Usage: bfileops random [binary|text] OUTPUT_FILE SIZE"
+                echo "  binary: creates random binary data"
+                echo "  text: creates random alphanumeric text"
+                exit 1
+                ;;
+        esac ;;
+
+    noempties)
+        if [ -z "$1" ]; then
+            echo "Usage: bfileops noempties FILE"
+            echo "Removes spaces and blank lines (linearizes text for testing)"
+            exit 1
+        fi
+
+        local input="$1"
+        if [ ! -f "$input" ]; then echo "Error: File '$input' not found"; exit 1; fi
+
+        # Create backup first
+        local backup="${input}.backup.$(date +%Y%m%d_%H%M%S)"
+        if ! cp "$input" "$backup"; then
+            echo "Error: Cannot create backup file"
+            exit 1
+        fi
+
+        local tmp="/tmp/noempties_$$"
+        echo "Linearizing text file: $input"
+        echo "Backup saved as: $backup"
+
+        if perl -nlwe 'tr/ //d; print if length' "$input" > "$tmp"; then
+            local orig_lines new_lines
+            orig_lines=$(wc -l < "$input")
+            new_lines=$(wc -l < "$tmp")
+
+            mv "$tmp" "$input"
+            echo "Linearized: $orig_lines lines -> $new_lines lines (spaces and empties removed)"
+        else
+            echo "Error: Text processing failed"
+            rm -f "$tmp"
+            exit 1
+        fi ;;
+
     compress)
-        if [ -z "$1" ] || [ -z "$2" ]; then echo "Usage: bfileops compress INPUT.pdf OUTPUT.pdf"; exit 1; fi
-        gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dNOPAUSE -dBATCH -dQUIET -sOutputFile="$2" "$1" ;;
+        if [ -z "$1" ] || [ -z "$2" ]; then
+            echo "Usage: bfileops compress INPUT.pdf OUTPUT.pdf"
+            exit 1
+        fi
+
+        local input="$1" output="$2"
+        if [ ! -f "$input" ]; then echo "Error: Input file '$input' not found"; exit 1; fi
+        if [ "${input##*.}" != "pdf" ]; then echo "Warning: Input doesn't appear to be a PDF file"; fi
+
+        echo "Compressing PDF: $input -> $output"
+        if gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dNOPAUSE -dBATCH -dQUIET -sOutputFile="$output" "$input"; then
+            local orig_size new_size
+            orig_size=$(stat -f%z "$input" 2>/dev/null || stat -c%s "$input" 2>/dev/null)
+            new_size=$(stat -f%z "$output" 2>/dev/null || stat -c%s "$output" 2>/dev/null)
+            echo "Compression complete: $(($orig_size/1024))KB -> $(($new_size/1024))KB"
+        else
+            echo "Error: PDF compression failed"
+            rm -f "$output"
+            exit 1
+        fi ;;
+
     *) echo "Unknown operation: $operation" ;;
 esac

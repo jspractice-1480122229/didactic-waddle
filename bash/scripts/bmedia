@@ -21,8 +21,18 @@ case "$operation" in
     louder)
         if [ -z "$1" ]; then echo "Usage: bmedia louder FILE.mp3"; exit 1; fi
         lame --scale 2 "$1" "/tmp/tmp_$$.mp3" && mv "/tmp/tmp_$$.mp3" "$1" ;;
+    # ⚡️ RUN-ABLE - Safer batch processing
     compress)
         output_dir="${2:-compressed}"; mkdir -p "$output_dir"
+        local count=0
+        for f in *.mp3; do
+            if [ -f "$f" ]; then ((count++)); fi
+        done
+        if [ $count -gt 10 ]; then
+            echo "Found $count MP3 files. Continue? (y/N)"
+            read -r response
+            [[ ! "$response" =~ ^[Yy]$ ]] && exit 0
+        fi
         for f in *.mp3; do [ -f "$f" ] && ffmpeg -n -i "$f" -ac 1 -ab 40k -ar 22050 "$output_dir/$f"; done ;;
     convert)
         format="${1:-mp3}"; output_dir="${format}_version"; mkdir -p "$output_dir"
