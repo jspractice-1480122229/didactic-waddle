@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Standalone script for search functions
+# ⚡️ RUN-ABLE
+# Standalone script for search functions - Improved Edition
 
 if [ -z "$1" ]; then
     echo "Usage: bfinder [name|exec|content] [args]"
@@ -9,12 +10,108 @@ fi
 operation="$1"; shift
 
 case "$operation" in
-    name) find . -type f -iname "*$1*" -ls ;;
-    exec) find . -type f -iname "*$1*" -exec "$@" {} \; ;;
+    name)
+        local pattern="$1" show_details="${2:-false}"
+        if [ -z "$pattern" ]; then echo "Usage: bfinder name PATTERN [details]"; exit 1; fi
+
+        if [ "$show_details" = "details" ]; then
+            find . -maxdepth 5 -type f -iname "*$pattern*" -ls
+        else
+            echo "Files matching '$pattern':"
+            find . -maxdepth 5 -type f -iname "*$pattern*" -printf "%P\n" | head -50
+        fi ;;
+
+    exec)
+        local pattern="$1"; shift
+        if [ -z "$pattern" ] || [ $# -eq 0 ]; then
+            echo "Usage: bfinder exec PATTERN command [args...]"
+            echo "Example: bfinder exec '*.txt' wc -l"
+            exit 1
+        fi
+
+        # Blacklist obviously destructive commands
+        local cmd="$1"
+        case "$cmd" in
+            rm|rmdir|dd|shred|wipe|chmod)
+                echo "Error: '$cmd' command blocked for safety. Use it manually if you really need it."
+                exit 1 ;;
+        esac
+
+        # Find and preview what we're dealing with
+        local files=()
+        while IFS= read -r -d '' file; do
+            files+=("$file")
+        done < <(find . -maxdepth 5 -type f -iname "$pattern" -print0)
+
+        if [ ${#files[@]} -eq 0 ]; then
+            echo "No files matching pattern: $pattern"
+            exit 1
+        fi
+
+        echo "Found ${#files[@]} files matching '$pattern'"
+        printf '  %s\n' "${files[@]:0:3}"
+        [ ${#files[@]} -gt 3 ] && echo "  ... and $((${#files[@]} - 3)) more"
+
+        echo "Run '$*' on these files? (y/N)"
+        read -r response
+        [[ "$response" =~ ^[Yy]$ ]] || { echo "Operation cancelled"; exit 0; }
+
+        local success=0 failed=0
+        for file in "${files[@]}"; do
+            echo "Processing: $file"
+            if "$@" "$file"; then
+                ((success++))
+            else
+                echo "Failed: $file"
+                ((failed++))
+            fi
+        done
+
+        echo "Completed: $success successful, $failed failed" ;;
+
     content)
-        case_flag=""; pattern=""; ext="*"
-        if [ "$1" = "-i" ]; then case_flag="-i"; shift; fi
-        pattern="$1"; [ -n "$2" ] && ext="$2"
-        find . -type f -name "$ext" -print0 | xargs -0 grep --color=always -sn $case_flag "$pattern" 2>/dev/null | more ;;
+        local case_flag="" pattern="" ext="*" max_results=100
+
+        # Parse arguments properly
+        while [[ $# -gt 0 ]]; do
+            case "$1" in
+                -i) case_flag="-i"; shift ;;
+                -n) max_results="$2"; shift 2 ;;
+                -e) ext="$2"; shift 2 ;;
+                -*) echo "Unknown option: $1"; echo "Usage: bfinder content [-i] [-n max_results] [-e extension] PATTERN"; exit 1 ;;
+                *) pattern="$1"; shift ;;
+            esac
+        done
+
+        if [ -z "$pattern" ]; then
+            echo "Usage: bfinder content [-i] [-n max_results] [-e extension] PATTERN"
+            echo "  -i: case insensitive search"
+            echo "  -n: limit number of results (default: 100)"
+            echo "  -e: file extension pattern (default: *)"
+            exit 1
+        fi
+
+        echo "Searching for '$pattern' in files matching '$ext'..."
+
+        find . -maxdepth 8 \
+               -type f \
+               -name "$ext" \
+               -size -10M \
+               -not -path './.git/*' \
+               -not -path './node_modules/*' \
+               -not -path './.npm/*' \
+               -not -path './target/*' \
+               -not -path './build/*' \
+               -not -name '*.min.*' \
+               -not -name '*.log' \
+               -print0 | \
+        xargs -0 grep -l $case_flag "$pattern" 2>/dev/null | \
+        head -n "$max_results" | \
+        while read -r file; do
+            echo "=== $file ==="
+            grep --color=always -n $case_flag "$pattern" "$file" | head -3
+            echo
+        done ;;
+
     *) echo "Unknown operation: $operation" ;;
 esac

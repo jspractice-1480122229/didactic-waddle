@@ -15,20 +15,127 @@ safer_glob() {
 }
 
 case "$operation" in
-    resize)
-        width="${1:-800}"; quality="${2:-60}"
-        safer_glob
-        for f in *.jpg *.jpeg *.png *.gif *.bmp; do
-            base="${f%.*}"
-            magick "$f" -resize "${width}x>" -quality "$quality" "resized_${base}.webp"
-        done ;;
-    clean) for f in *.jpg; do [ -f "$f" ] && jpegoptim -pqt --strip-all "$f"; done ;;
+# ⚡️ RUN-ABLE - Actually usable resize function
+resize)
+    local width="${1:-800}" quality="${2:-60}" format="${3:-webp}" prefix="${4:-resized_}"
+
+    # Validate inputs like we're not animals
+    if ! [[ "$width" =~ ^[0-9]+$ ]]; then echo "Error: Width must be a number"; exit 1; fi
+    if ! [[ "$quality" =~ ^[0-9]+$ ]] || [ "$quality" -gt 100 ] || [ "$quality" -lt 1 ]; then
+        echo "Error: Quality must be 1-100"; exit 1; fi
+
+    safer_glob
+    local files=(*.jpg *.jpeg *.png *.gif *.bmp)
+    if [ ${#files[@]} -eq 0 ]; then echo "No image files found in current directory"; exit 1; fi
+
+    echo "Found ${#files[@]} image files. Processing..."
+    local count=0
+    for f in "${files[@]}"; do
+        if [ -f "$f" ]; then
+            local base="${f%.*}"
+            local output="${prefix}${base}.${format}"
+            if [ -f "$output" ]; then
+                echo "Skipping $f (output exists: $output)"
+                continue
+            fi
+            echo "Processing $f -> $output"
+            if magick "$f" -resize "${width}x>" -quality "$quality" "$output"; then
+                ((count++))
+            else
+                echo "Failed to process $f"
+            fi
+        fi
+    done
+    echo "Processed $count images successfully."
+    ;;
+    # ⚡️ RUN-ABLE - Universal metadata destruction
+clean)
+    local count=0 total=0
+
+    echo "Scanning for images with potential metadata..."
+
+    # Count what we're dealing with first
+    for f in *.jpg *.jpeg *.png *.tiff *.tif *.heic *.heif *.webp; do
+        [ -f "$f" ] && ((total++))
+    done
+
+    if [ $total -eq 0 ]; then
+        echo "No image files found to clean"
+        exit 0
+    fi
+
+    echo "Found $total image files. Processing..."
+
+    # Handle JPEG files with jpegoptim (your original approach)
+    for f in *.jpg *.jpeg; do
+        if [ -f "$f" ]; then
+            echo "Cleaning JPEG metadata: $f"
+            if jpegoptim -pq --strip-all "$f"; then
+                ((count++))
+            else
+                echo "Failed to clean: $f"
+            fi
+        fi
+    done
+
+    # Handle everything else with exiftool (if available) or ImageMagick
+    for f in *.png *.tiff *.tif *.heic *.heif *.webp; do
+        if [ -f "$f" ]; then
+            echo "Cleaning metadata from: $f"
+            if command -v exiftool &>/dev/null; then
+                # exiftool is the nuclear option - removes ALL metadata
+                if exiftool -all= -overwrite_original "$f" 2>/dev/null; then
+                    ((count++))
+                else
+                    echo "Failed to clean with exiftool: $f"
+                fi
+            elif command -v magick &>/dev/null; then
+                # ImageMagick fallback - strips most metadata
+                local temp="/tmp/clean_$$_${f##*/}"
+                if magick "$f" -strip "$temp" && mv "$temp" "$f"; then
+                    ((count++))
+                else
+                    echo "Failed to clean with ImageMagick: $f"
+                    rm -f "$temp"
+                fi
+            else
+                echo "No metadata cleaning tool available for: $f"
+            fi
+        fi
+    done
+
+    echo "Successfully cleaned metadata from $count of $total files"
+    ;;
     thumb)
         size="${1:-48x38}"
         for f in *.jpg; do [ -f "$f" ] && convert -sample "$size" "$f" "thumb_${f%.*}.jpg"; done ;;
-    favicon)
-        if [ -z "$1" ]; then echo "Usage: bimg favicon INPUT [OUTPUT]"; exit 1; fi
-        output="${2:-favicon.ico}"
-        magick convert "$1" -resize 16x16 -gravity center -crop 16x16+0+0 -flatten -colors 256 -background transparent "$output" ;;
-    *) echo "Unknown operation: $operation" ;;
+# ⚡️ RUN-ABLE - Modern favicon that won't embarrass you
+favicon)
+    if [ -z "$1" ]; then echo "Usage: bimg favicon INPUT [OUTPUT]"; exit 1; fi
+    if [ ! -f "$1" ]; then echo "Error: Input file '$1' not found"; exit 1; fi
+
+    local input="$1"
+    local output="${2:-favicon.ico}"
+    local temp_dir="/tmp/favicon_$$"
+
+    # Create temp directory for multi-resolution madness
+    mkdir -p "$temp_dir" || { echo "Error: Cannot create temp directory"; exit 1; }
+    trap "rm -rf $temp_dir" EXIT
+
+    echo "Generating multi-resolution favicon from: $input"
+
+    # Generate the sizes that actually matter in 2025
+    magick "$input" -background transparent \
+           \( -clone 0 -resize 16x16 -write "$temp_dir/16.png" \) \
+           \( -clone 0 -resize 32x32 -write "$temp_dir/32.png" \) \
+           \( -clone 0 -resize 48x48 -write "$temp_dir/48.png" \) \
+           \( -clone 0 -resize 64x64 -write "$temp_dir/64.png" \) \
+           -delete 0 null: || { echo "Error: Failed to generate PNG sizes"; exit 1; }
+
+    # Combine into proper ICO file
+    magick "$temp_dir/16.png" "$temp_dir/32.png" "$temp_dir/48.png" "$temp_dir/64.png" "$output" || {
+        echo "Error: Failed to create ICO file"; exit 1; }
+
+    echo "Created modern favicon: $output (16px, 32px, 48px, 64px)"
+    ;;
 esac
