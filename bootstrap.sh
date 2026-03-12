@@ -189,7 +189,7 @@ print_module_help() {
   case "$m" in
     media_lounge_streaming)
       printf "Notes:\n"
-      printf "  - Uses AUR on Arch for FreeTube.\n"
+      printf "  - Uses AUR on Arch for 'freetube-bin'.\n"
       printf "  - On non-Arch, currently no-op unless you add native package names.\n"
       ;;
     dotfiles_bashrc)
@@ -460,7 +460,7 @@ build_plan() {
   if [[ " ${SELECTED_MODULES[*]} " == *" media_lounge_streaming "* ]]; then
     case "$pkg_manager" in
       pacman)
-        add_aur_pkg "freetube"
+        add_aur_pkg "freetube-bin"
         ;;
       *)
         add_action "NOTE: media_lounge_streaming currently only installs FreeTube on Arch via AUR"

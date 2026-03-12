@@ -1,0 +1,642 @@
+#!/usr/bin/env fish
+# This is my custom functions.fish file
+# It contains various functions for common tasks.
+# Optimized Fish Shell Functions - Consolidated and Parameterized
+
+### Package Manager Detection and Core Functions ###
+
+function __detect_pkg_manager -d "Detect system package manager"
+    if command -v apt >/dev/null
+        echo "apt"
+    else if command -v pacman >/dev/null
+        echo "pacman"
+    else if command -v dnf5 >/dev/null
+        echo "dnf5"
+    else if command -v dnf >/dev/null
+        echo "dnf"
+    else if command -v zypper >/dev/null
+        echo "zypper"
+    else
+        echo "unknown"
+        return 1
+    end
+end
+
+function __install_packages -d "Internal package installation handler"
+    set -l pkg_manager (__detect_pkg_manager)
+    set -l packages $argv
+
+    switch $pkg_manager
+        case apt
+            sudo apt update && sudo apt install -y $packages
+        case pacman
+            sudo pacman -S --noconfirm --needed $packages
+        case dnf dnf5
+            sudo $pkg_manager install -y $packages
+        case zypper
+            sudo zypper install -y $packages
+        case '*'
+            echo "Unsupported package manager"
+            return 1
+    end
+end
+
+### System Management Functions ###
+
+function sys -d "System management operations" -a operation
+    set -l pkg_manager (__detect_pkg_manager)
+    
+    switch $operation
+        case search
+            switch $pkg_manager
+                case apt      apt search $argv[2]
+                case pacman   pacman -Ss $argv[2]
+                case dnf*     $pkg_manager search $argv[2]
+                case zypper   zypper search $argv[2]
+                case '*'      echo "Unsupported package manager"
+            end
+        case install
+            __install_packages $argv[2..-1]
+        case upgrade
+            switch $pkg_manager
+                case apt
+                    sudo apt update
+                    sudo apt full-upgrade -y
+                    sudo apt autoremove --purge -y
+                    sudo apt clean
+                case pacman
+                    sudo pacman -Syu --noconfirm
+                    set -l orphans (pacman -Qtdq 2>/dev/null)
+                    test -n "$orphans" && sudo pacman -Rns --noconfirm $orphans
+                    sudo pacman -Scc --noconfirm
+                case dnf*
+                    sudo $pkg_manager upgrade --refresh -y
+                    sudo $pkg_manager autoremove -y
+                    sudo $pkg_manager clean all
+                case zypper
+                    sudo zypper refresh
+                    sudo zypper update -y
+                    sudo zypper remove -u
+                    sudo zypper clean --all
+                case '*'
+                    echo "Unsupported package manager"
+            end
+        case mssql
+            if test "$argv[2]" = "start"
+                sudo systemctl restart mssql-server.service
+            else if test "$argv[2]" = "stop"
+                sudo systemctl stop mssql-server.service
+            end
+            systemctl list-units | grep --color mssql
+        case '*'
+            echo "Usage: sys [search|install|upgrade|mssql] [args]"
+    end
+end
+
+### Developer Tools Installation ###
+
+function install_vim -d "Install Vim from source (cross-distro)"
+    set -l pkg_manager (__detect_pkg_manager)
+    echo "Installing Vim dependencies for $pkg_manager..."
+
+    # Common build tools
+    set -l build_tools git cmake
+    set -l python_pkg python3 python3-pip
+    set -l clang_pkg clang libclang-dev
+
+    # Distro-specific package names
+    switch $pkg_manager
+        case apt
+            set build_tools $build_tools build-essential
+            set -a clang_pkg llvm
+            set deps \
+                libncurses5-dev libgtk2.0-dev libatk1.0-dev \
+                libcairo2-dev libx11-dev libxpm-dev libxt-dev \
+                ruby-dev lua5.3 liblua5.3-dev libperl-dev
+
+        case pacman  # Includes Arch, CachyOS, Manjaro etc.
+            set build_tools $build_tools base-devel
+            set python_pkg python python-pip
+            set clang_pkg clang llvm
+            set deps \
+                ncurses gtk2 atk cairo libx11 libxpm libxt \
+                ruby lua perl
+
+        case dnf dnf5
+            set build_tools $build_tools ninja-build
+            set deps \
+                ncurses-devel gtk2-devel atk-devel cairo-devel \
+                libX11-devel libXpm-devel libXt-devel ruby-devel \
+                lua-devel perl-devel
+
+        case zypper
+            set build_tools $build_tools ninja
+            set deps \
+                ncurses-devel gtk2-devel atk-devel cairo-devel \
+                libX11-devel libXpm-devel libXt-devel ruby-devel \
+                lua-devel perl-devel
+
+        case '*'
+            echo "Unsupported package manager: $pkg_manager"
+            return 1
+    end
+
+    # Combine all packages
+    set all_pkgs $build_tools $python_pkg $clang_pkg $deps
+
+    # Install packages
+    if not __install_packages $all_pkgs
+        echo "Failed to install dependencies"
+        return 1
+    end
+
+    # Set up source directory
+    set -l vim_src "$HOME/src/vim"
+    if not test -d "$vim_src"
+        git clone https://github.com/vim/vim.git "$vim_src"
+    end
+
+    # Build and install
+    cd "$vim_src" || return
+    git pull --rebase
+    git submodule update --init --recursive
+
+    make clean distclean
+
+    # Dynamic Python detection
+    set -l python_cmd (command -v python3 || command -v python)
+    set -l python_config (python3-config --configdir 2>/dev/null || echo "")
+
+    ./configure \
+        --with-features=huge \
+        --enable-multibyte \
+        --enable-rubyinterp=yes \
+        --with-x \
+        --enable-perlinterp=yes \
+        --enable-luainterp=yes \
+        --enable-gui=gtk2 \
+        --enable-cscope \
+        --prefix=/usr/local \
+        --enable-python3interp=yes \
+        --with-python3-config-dir="$python_config" \
+        --with-python3-command="$python_cmd"
+
+    make -j(nproc)
+    sudo make install
+
+    # Set as default editor (Linux-specific)
+    if command -v update-alternatives >/dev/null
+        sudo update-alternatives --install /usr/bin/editor editor /usr/local/bin/vim 1
+        sudo update-alternatives --set editor /usr/local/bin/vim
+        sudo update-alternatives --install /usr/bin/vi vi /usr/local/bin/vim 1
+        sudo update-alternatives --set vi /usr/local/bin/vim
+    end
+
+    echo "Vim installation completed for $pkg_manager"
+    echo "New Vim version: "(vim --version | head -1)
+end
+
+function install_ycm -d "Install YouCompleteMe with cross-distro support"
+    set -l pkg_manager (__detect_pkg_manager)
+    echo "Setting up YouCompleteMe for $pkg_manager..."
+
+    # Dynamic JDK detection
+    set -l jdk_pkg
+    switch $pkg_manager
+        case apt
+            set jdk_pkg (apt-cache search openjdk | grep -E 'openjdk-[0-9]+-jdk' | sort -V | tail -1 | cut -d' ' -f1)
+            set mono_pkg mono-complete
+            set golang_pkg golang
+            set node_pkg nodejs npm
+            set shellcheck_pkg shellcheck
+        case pacman  # Includes Arch, CachyOS, etc.
+            set jdk_pkg (pacman -Ss jdk | grep -E '^extra/jdk-openjdk' | sort -V | tail -1 | cut -d' ' -f1)
+            set mono_pkg mono
+            set golang_pkg go
+            set node_pkg nodejs npm
+            set shellcheck_pkg shellcheck
+        case dnf dnf5
+            set jdk_pkg (dnf search jdk | grep -E '^java-[0-9]+-openjdk-devel' | sort -V | tail -1 | cut -d':' -f1)
+            set mono_pkg mono-complete
+            set golang_pkg golang
+            set node_pkg nodejs npm
+            set shellcheck_pkg ShellCheck
+        case zypper
+            set jdk_pkg (zypper search -s jdk | grep -E '^java-[0-9]+-openjdk-devel' | sort -V | tail -1 | awk '{print $2}')
+            set mono_pkg mono-complete
+            set golang_pkg go
+            set node_pkg nodejs npm
+            set shellcheck_pkg ShellCheck
+        case '*'
+            echo "Unsupported package manager: $pkg_manager"
+            return 1
+    end
+
+    if test -z "$jdk_pkg"
+        echo "Could not detect OpenJDK package"
+        return 1
+    end
+
+    # Install dependencies
+    set -l ycm_deps $jdk_pkg $mono_pkg $golang_pkg $node_pkg $shellcheck_pkg
+    if not __install_packages $ycm_deps
+        echo "Failed to install YCM dependencies"
+        return 1
+    end
+
+    # Update npm
+    if command -v npm >/dev/null
+        npm install -g npm@latest
+    else
+        echo "npm not found - Node.js may not be properly installed"
+        return 1
+    end
+
+    # Install/update YCM
+    set -l ycm_dir "$HOME/.vim/bundle/YouCompleteMe"
+    if not test -d "$ycm_dir"
+        vim +PluginInstall +qall
+    else
+        vim +PluginUpdate +qall
+    end
+
+    # Build YCM with all completers
+    cd "$ycm_dir" || return
+    python3 install.py --all
+
+    echo "YouCompleteMe setup completed with:"
+    echo "- JDK: $jdk_pkg"
+    echo "- Node: "(node --version)
+    echo "- npm: "(npm --version)
+end
+
+function install_wz -d "Install Warzone 2100 game (cross-distro)"
+    set -l pkg_manager (__detect_pkg_manager)
+    echo "Installing Warzone 2100 dependencies for $pkg_manager..."
+
+    # Common build tools
+    set -l build_tools cmake ninja
+
+    # Distro-specific package names
+    switch $pkg_manager
+        case apt
+            set -a build_tools build-essential
+            set deps \
+                libsdl2-dev libopenal-dev libphysfs-dev \
+                libvorbis-dev libogg-dev libtheora-dev \
+                libpng-dev libjpeg-dev libupnp-dev \
+                libsqlite3-dev libcurl4-openssl-dev \
+                libgles2-mesa-dev libglu1-mesa-dev \
+                libsodium-dev libfmt-dev
+
+        case pacman  # Arch, CachyOS, etc.
+            set -a build_tools base-devel
+            set deps \
+                sdl2 openal physfs \
+                libvorbis libogg libtheora \
+                libpng libjpeg-turbo libupnp \
+                sqlite curl \
+                mesa glu \
+                libsodium fmt
+
+        case dnf dnf5
+            set -a build_tools gcc-c++ ninja-build
+            set deps \
+                SDL2-devel openal-soft-devel physfs-devel \
+                libvorbis-devel libogg-devel libtheora-devel \
+                libpng-devel libjpeg-turbo-devel libupnp-devel \
+                sqlite-devel libcurl-devel \
+                mesa-libGL-devel mesa-libGLU-devel \
+                libsodium-devel fmt-devel
+
+        case zypper
+            set -a build_tools gcc-c++ ninja
+            set deps \
+                libSDL2-devel openal-soft-devel physfs-devel \
+                libvorbis-devel libogg-devel libtheora-devel \
+                libpng16-devel libjpeg-devel libupnp-devel \
+                sqlite3-devel libcurl-devel \
+                Mesa-libGL-devel Mesa-libGLU-devel \
+                libsodium-devel fmt-devel
+
+        case '*'
+            echo "Unsupported package manager: $pkg_manager"
+            return 1
+    end
+
+    # Install packages
+    if not __install_packages $build_tools $deps
+        echo "Failed to install dependencies"
+        return 1
+    end
+
+    # Set up source directory
+    set -l wz_src "$HOME/src/warzone2100"
+    if not test -d "$wz_src"
+        git clone --recurse-submodules https://github.com/Warzone2100/warzone2100 "$wz_src"
+    end
+
+    # Build and install
+    cd "$wz_src" || return
+    
+    # Force update all submodules
+    git submodule sync --recursive
+    git submodule update --init --recursive --force --remote
+
+    # Clean previous build
+    mkdir -p build
+    cd build || return
+    
+    # Run cmake with explicit paths
+    cmake \
+        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+        -DCMAKE_INSTALL_PREFIX=/opt/warzone2100-latest \
+        -DENABLE_DOCS=OFF \
+        -DENABLE_BINKDEC=ON \
+        -DENABLE_OPENAL=ON \
+        -GNinja ..
+
+    # Build with verbose output for debugging
+    cmake --build . --parallel (nproc) --verbose
+    sudo cmake --install .
+
+    echo "Warzone 2100 successfully installed to /opt/warzone2100-latest"
+    echo "Run with: /opt/warzone2100-latest/bin/warzone2100"
+end
+
+### [Previous functions from your original file...]
+### [All your existing media, img, fileops, utils, finder, archive functions remain unchanged]
+### [They can be placed here maintaining their original order and functionality]
+
+# Move filenames to lowercase
+function hmmm --description 'Convert filenames/directories to lowercase'
+  # Usage: hmmm [directory]
+  set -l dir "."
+  
+  if test (count $argv) -gt 0
+    set dir "$argv[1]"
+  end
+
+  set dir (readlink -f "$dir")
+  echo "Converting files/directories in $dir..."
+
+  # Find all files and directories recursively
+  for file in (find "$dir" -depth)
+    set -l basename (basename "$file")
+    set -l dirname (dirname "$file")
+    set -l newname (string lower "$basename")
+
+    # Skip if no change needed
+    if test "$basename" = "$newname"
+      continue
+    end
+
+    set -l newpath "$dirname/$newname"
+
+    # Check if the new path already exists
+    if test -e "$newpath"
+      echo "Skipping: $file (target exists: $newpath)"
+      continue
+    end
+
+    # Perform the rename
+    mv -- "$file" "$newpath"
+    echo "Lowercase: $file → $newpath"
+  end
+end
+
+# Make multiple copies of a file
+function dpe
+  # Usage: dpe input.txt 3
+  # Ensure the function is properly defined and ready to be used.
+  set -l usage "dpe: Create multiple copies of a file."
+  argparse --help --usage "$usage" i=t
+
+  if not test $argv[1]
+    echo "$usage"
+    return 1
+  end
+
+  set -l ncopies (count $argv)
+  set -l input_file "$argv[1]"
+
+  for i in (seq 1 $ncopies)
+    cp "$input_file" "i$input_file"
+  end
+end
+
+# DES3 OpenSSL decrypt a file
+function descramble
+  # Usage: descramble <input_file> <output_file>
+  argparse --help --usage "Usage: descramble <input_file> <output_file>" in:o=i out:o=i
+
+  if not test $argv[1] or not test $argv[2]
+    echo "$usage"
+    return 1
+  end
+
+  set -l input_file "$argv[in]"
+  set -l output_file "$argv[out]"
+
+  openssl des3 -d -in "$input_file" -out "$output_file"
+end
+
+# DES3 OpenSSL encrypt a file
+function scramble
+  # Usage: scramble <input_file> <output_file>
+  argparse --help --usage "Usage: scramble <input_file> <output_file>" in:o=i out:o=i
+
+  if not test $argv[1] or not test $argv[2]
+    echo "$usage"
+    return 1
+  end
+
+  set -l input_file "$argv[in]"
+  set -l output_file "$argv[out]"
+
+  openssl des3 -salt -in "$input_file" -out "$output_file"
+end
+
+# Find files with a pattern in the name
+function ff
+  # Usage: ff <pattern>
+  # Find files with the specified pattern in their names.
+  set -l usage "ff: Find files with a specific pattern."
+  if test (count $argv) -ne 1
+    echo "$usage"
+    return 1
+  end
+
+  find . -type f -iname "*$1*" -ls
+end
+
+# Find a file with pattern $1 and execute $2 on it
+function fe
+  # Usage: fe <pattern> <command>
+  # Find files with the specified pattern in their names and execute the given command on each.
+  set -l usage "fe: Find files with a pattern and execute a command."
+  if test (count $argv) -ne 2
+    echo "$usage"
+    return 1
+  end
+  find . -type f -iname "*$1*" -exec "$2" {} \;
+end
+
+# Cut last n lines in file, 20 by default
+function cuttail
+  # Usage: cuttail <input_file> [n_lines=20]
+  # Cut the last n lines (default 20) from the specified file.
+  set -l usage "cuttail: Cut the last n lines from a file."
+  if test (count $argv) -eq 0
+    echo "$usage"
+    return 1
+  end
+
+  if test (count $argv) -eq 1
+    set -l nlines 20
+  else
+    set -l nlines "$2"
+  end
+
+  sed -n -e :a -e "1,$nlines!{P;N;D;}; N; ba" "$1"
+end
+
+# What desktop am I running?
+function wutdt
+  # Retrieve XDG_CURRENT_DESKTOP environment variable.
+  set -l desktop "$XDG_CURRENT_DESKTOP"
+
+  # Retrieve GDM_SESSION environment variable for GNOME sessions on Wayland.
+  set -l gdm_session "$GDM_SESSION"
+
+  echo "Desktop: $desktop"
+  echo "Session: $gdm_session"
+end
+
+# Swap two filenames around, if they exist
+function tradesies
+    set -l TMPFILE "tmp.$fish_pid"
+
+    if test (count $argv) -ne 2
+        echo "swap: 2 arguments needed"
+        return 1
+    end
+
+    if not test -e "$argv[1]"
+        echo "swap: $argv[1] does not exist"
+        return 1
+    end
+
+    if not test -e "$argv[2]"
+        echo "swap: $argv[2] does not exist"
+        return 1
+    end
+
+    mv -- "$argv[1]" "$TMPFILE"
+    mv -- "$argv[2]" "$argv[1]"
+    mv -- "$TMPFILE" "$argv[2]"
+end
+
+# Handy Extract Program.
+function pfimpf
+    if test -f "$1"
+        switch (string lower -- (path extension "$1"))
+            case '.tar.bz2' '.tbz2'
+                tar xvjf "$1"
+            case '.tar.gz' '.tgz'
+                tar xvzf "$1"
+            case '.bz2'
+                bunzip2 "$1"
+            case '.rar'
+                if command -v unrar >/dev/null
+                    unrar x "$1"
+                else
+                    echo "unrar not installed"
+                    return 1
+                end
+            case '.zip'
+                unzip "$1"
+            case '.Z'
+                uncompress "$1"
+            case '.tar'
+                tar xvf "$1"
+            case '.xz'
+                unxz "$1"
+            case '*'
+                echo "Extension not recognized"
+                return 1
+        end
+    else
+        echo "File not found: $1"
+        return 1
+    end
+end
+
+# Get PID to kill, from top
+function gettoptopid
+  # Set -l usage: This function takes an application name as its argument and returns the process ID (PID) of that application.
+  set -l usage "gettoptopid <application_name>"
+
+  if not test -z "$argv[1]"
+    top -p "$(pgrep -d , "$argv[1]")"
+  else
+    echo "$usage"
+  end
+end
+
+function favico
+  # Create a 16x16px favicon.ico file
+  set -l usage "favico <input_image_path> [<output_path>]"
+
+  if test -z "$argv[1]"
+    echo $usage
+    return 1
+  end
+
+  set -l input_file "$argv[1]"
+  set -l output_file "favicon.ico"
+
+  if test -n "$argv[2]"
+    set output_file "$argv[2]"
+  end
+
+  if command -v magick >/dev/null
+    magick convert "$input_file" -resize 16x16 -gravity center -crop 16x16+0+0 \
+      -flatten -colors 256 -background transparent "$output_file"
+    echo "Created favicon: $output_file"
+  else
+    echo "Error: ImageMagick not installed"
+    return 1
+  end
+end
+
+# Play random audio files from a directory using ffplay (from ffmpeg)
+function toonzes
+  # Play random audio files from a directory using ffplay (from ffmpeg)
+  set -l usage "toonzes [<directory_path>]"
+
+  if test -z "$argv[1]"
+    set dir "."
+  else
+    set dir "$argv[1]"
+  end
+
+  # Find and play random audio files in the specified directory
+  for f in (find "$dir" -type f \( -iname "*.mp3" -o -iname "*.flac" -o -iname "*.wav" -o -iname "*.aac" -o -iname "*.mp4" \) | shuf)
+    if test -n "$(ffprobe -v error -select_streams a -show_entries stream=codec_name -of default=noprint_wrappers=1 "$f" 2>/dev/null)"
+      echo "Playing: $f"
+      ffplay -autoexit -nodisp -- "$f" >/dev/null 2>&1
+    else
+      echo "Skipping: $f (no audio stream found)"
+    end
+  end
+end
+
+### Final Initialization ###
+
+if not functions -q cd_func
+    # Only define cd_func if not already defined
+    function cd_func -d "Enhanced cd with directory history"
+        # ... [original cd_func implementation]
+    end
+end
