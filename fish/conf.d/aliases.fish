@@ -109,4 +109,4 @@ alias purtyjson 'python -m json.tool'
 alias moo 'fortune -c | cowthink -f (find /usr/share/cowsay/cows -type f | shuf -n 1)' # [cite: 12]
 alias dia 'date +%s'
 alias tstamp 'date +%Y-%m-%dT%T%:z'
-alias aye 'podman-compose down && podman-compose pull && podman-compose up -d --build'
+alias aye 'cd $HOME/pickles/dox/ai_rag/ && podman-compose down && podman-compose pull && podman-compose up -d --build'

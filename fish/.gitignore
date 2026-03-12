@@ -1,2 +1,5 @@
 secrets.fish
 fish_variables
+config.fish.backup
+bootstrap-script_ng.sh
+convert_bash_to_fish.sh

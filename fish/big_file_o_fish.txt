@@ -1,0 +1,1378 @@
+# ripytsong.fish
+function ripytsong -d "Rip audio from YouTube with metadata"
+    if test (count $argv) -eq 0
+        echo "Usage: ripytsong URL [URL2 URL3...]"
+        echo "Example: ripytsong https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+        return 1
+    end
+    yt-dlp -f bestaudio --extract-audio --prefer-ffmpeg \
+        --audio-format m4a --embed-thumbnail --add-metadata \
+        --parse-metadata "comment:%(webpage_url)s" \
+        -o '%(title)s.%(ext)s' $argv
+end
+
+# pullytaudio.fish  
+function pullytaudio -d "Pull best audio clip from YouTube"
+    if test (count $argv) -eq 0
+        echo "Usage: pullytaudio URL [URL2 URL3...]"
+        echo "Example: pullytaudio https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+        return 1
+    end
+    yt-dlp -f bestaudio $argv
+end
+
+# bestytclip.fish
+function bestytclip -d "Download best quality YouTube clip"
+    if test (count $argv) -eq 0
+        echo "Usage: bestytclip URL [URL2 URL3...]"
+        echo "Example: bestytclip https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+        return 1
+    end
+    yt-dlp -f best $argv
+end
+
+# louder.fish
+function louder -d "Make MP3 files louder with Lame"
+    if test (count $argv) -ne 1
+        echo "Usage: louder FILE.mp3"
+        echo "Example: louder mysong.mp3"
+        echo "Warning: This modifies the original file!"
+        return 1
+    end
+    lame --scale 2 $argv[1] tmp.$fish_pid.mp3
+    mv tmp.$fish_pid.mp3 $argv[1]
+end
+
+# dummyfile.fish
+function dummyfile -d "Make random dummy files"
+    if test (count $argv) -ne 2
+        echo "Usage: dummyfile FILENAME SIZE"
+        echo "Example: dummyfile testfile.dat 1024"
+        echo "Creates a file with SIZE bytes of random data"
+        return 1
+    end
+    head -c $argv[2] </dev/urandom > $argv[1]
+end
+
+# plugdummy.fish
+function plugdummy -d "Different way to make random data dummy files"
+    if test (count $argv) -ne 2
+        echo "Usage: plugdummy SIZE FILENAME"
+        echo "Example: plugdummy 1024 testfile.dat"
+        echo "Creates FILENAME with SIZE bytes of random data"
+        return 1
+    end
+    head -c $argv[1] </dev/urandom > $argv[2]
+end
+
+# noblanks.fish
+function noblanks -d "Trim spaces and blank lines from file"
+    if test (count $argv) -ne 1
+        echo "Usage: noblanks FILENAME"
+        echo "Example: noblanks messy_file.txt"
+        echo "Warning: This modifies the original file!"
+        return 1
+    end
+    set -l ets (date +%s)
+    perl -nlwe 'tr/ //d; print if length' $argv[1] > junk-$ets.tmp
+    mv $argv[1] junk-$ets.tmp.bak
+    mv junk-$ets.tmp $argv[1]
+    rm -fv junk-$ets.tmp.bak
+end
+
+# smushpdf.fish
+function smushpdf -d "Shrink PDF files"
+    if test (count $argv) -ne 2
+        echo "Usage: smushpdf INPUT.pdf OUTPUT.pdf"
+        echo "Example: smushpdf big_document.pdf small_document.pdf"
+        return 1
+    end
+    gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dNOPAUSE \
+       -dBATCH -dQUIET -sOutputFile=$argv[2] $argv[1]
+end
+
+# wordlist.fish
+function wordlist -d "Generate random word list"
+    echo "Usage: wordlist"
+    echo "Generates a random list of 5+ character words from fortune"
+    fortune -l -n 145 | string upper | string split " " | \
+        string replace -r '\W' '' | grep -E '.{5}' | sort -u | shuf
+end
+
+# ponies.fish
+function ponies -d "PONIES!!!"
+    echo "Usage: ponies"
+    echo "Shows a random fortune with a pony!"
+    fortune | ponythink -b unicode
+end
+
+# guidmaker.fish
+function guidmaker -d "Generate GUIDs"
+    if test (count $argv) -ne 1
+        echo "Usage: guidmaker COUNT"
+        echo "Example: guidmaker 5"
+        echo "Generates COUNT number of uppercase GUIDs"
+        return 1
+    end
+    set -l count $argv[1]
+    for i in (seq 1 $count)
+        uuidgen -r | string upper
+    end
+end
+
+# 3digit.fish
+function 3digit -d "Generate 3 digit random integer"
+    echo "Usage: 3digit"
+    echo "Generates a random 3-digit number (100-999)"
+    while true
+        set -l num (random 100 999)
+        echo $num
+        break
+    end
+end
+
+# 5digit.fish
+function 5digit -d "Generate 5 digit random integer"
+    echo "Usage: 5digit"
+    echo "Generates a random 5-digit number (10000-99999)"
+    while true
+        set -l num (random 10000 99999)
+        echo $num
+        break
+    end
+end
+
+# ytdl.fish
+function ytdl -d "YouTube download with multiple modes"
+    if test (count $argv) -lt 2
+        echo "Usage: ytdl MODE URL [URL2 URL3...]"
+        echo "Modes:"
+        echo "  rip    - Best audio with metadata (m4a)"
+        echo "  audio  - Best audio only"
+        echo "  video  - Best video quality"
+        echo "Example: ytdl rip https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+        return 1
+    end
+
+    set -l mode $argv[1]
+    set -l urls $argv[2..-1]
+
+    switch $mode
+        case rip
+            yt-dlp -f bestaudio --extract-audio --prefer-ffmpeg \
+                --audio-format m4a --embed-thumbnail --add-metadata \
+                --parse-metadata "comment:%(webpage_url)s" \
+                -o '%(title)s.%(ext)s' $urls
+        case audio
+            yt-dlp -f bestaudio $urls
+        case video
+            yt-dlp -f best $urls
+        case '*'
+            echo "Error: Unknown mode '$mode'"
+            echo "Valid modes: rip, audio, video"
+            return 1
+    end
+end
+
+# randumb.fish
+function randumb -d "Generate random numbers with specified digit count"
+    if test (count $argv) -ne 1
+        echo "Usage: randumb DIGITS"
+        echo "Example: randumb 3  # generates 100-999"
+        echo "Example: randumb 5  # generates 10000-99999"
+        return 1
+    end
+
+    set -l digits $argv[1]
+    
+    switch $digits
+        case 3
+            random 100 999
+        case 5
+            random 10000 99999
+        case '*'
+            # Generic case for any digit count
+            set -l min (math "10^($digits-1)")
+            set -l max (math "10^$digits - 1")
+            random $min $max
+    end
+end
+
+# dummydata.fish
+function dummydata -d "Create files with random data"
+    if test (count $argv) -ne 2
+        echo "Usage: dummydata FILENAME SIZE"
+        echo "Example: dummydata testfile.dat 1024"
+        echo "Creates FILENAME with SIZE bytes of random data"
+        return 1
+    end
+    
+    head -c $argv[2] </dev/urandom > $argv[1]
+end
+
+# louder.fish - FIXED: No temp file nonsense
+function louder -d "Make MP3 files louder with Lame"
+    if test (count $argv) -ne 1
+        echo "Usage: louder FILE.mp3"
+        echo "Example: louder mysong.mp3"
+        echo "Warning: This modifies the original file!"
+        return 1
+    end
+    
+    # Use lame's ability to overwrite in place
+    lame --scale 2 --mp3input $argv[1] $argv[1]
+end
+
+# noblanks.fish - FIXED: Direct pipe, no temp files
+function noblanks -d "Remove spaces and blank lines from file"
+    if test (count $argv) -ne 1
+        echo "Usage: noblanks FILENAME"
+        echo "Example: noblanks messy_file.txt"
+        echo "Warning: This modifies the original file!"
+        return 1
+    end
+    
+    # Create backup and process in one go
+    cp $argv[1] $argv[1].bak
+    perl -nlwe 'tr/ //d; print if length' $argv[1].bak > $argv[1]
+    rm $argv[1].bak
+end
+
+# Keep these separate wrapper functions for backward compatibility
+# ripytsong.fish
+function ripytsong -d "Rip audio from YouTube (wrapper for ytdl)"
+    ytdl rip $argv
+end
+
+# pullytaudio.fish
+function pullytaudio -d "Pull audio from YouTube (wrapper for ytdl)"
+    ytdl audio $argv
+end
+
+# bestytclip.fish
+function bestytclip -d "Download best video from YouTube (wrapper for ytdl)"
+    ytdl video $argv
+end
+
+# 3digit.fish
+function 3digit -d "Generate 3-digit random number (wrapper for randumb)"
+    randumb 3
+end
+
+# 5digit.fish
+function 5digit -d "Generate 5-digit random number (wrapper for randumb)"
+    randumb 5
+end
+
+# Keep both dummyfile functions as wrappers for compatibility
+# dummyfile.fish
+function dummyfile -d "Create dummy file (wrapper for dummydata)"
+    dummydata $argv[1] $argv[2]
+end
+
+# plugdummy.fish
+function plugdummy -d "Create dummy file with swapped args (wrapper for dummydata)"
+    dummydata $argv[2] $argv[1]
+end
+
+# smushpdf.fish - Already efficient, just added better error checking
+function smushpdf -d "Shrink PDF files"
+    if test (count $argv) -ne 2
+        echo "Usage: smushpdf INPUT.pdf OUTPUT.pdf"
+        echo "Example: smushpdf big_document.pdf small_document.pdf"
+        return 1
+    end
+    
+    if not test -f $argv[1]
+        echo "Error: Input file '$argv[1]' does not exist"
+        return 1
+    end
+    
+    gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dNOPAUSE \
+       -dBATCH -dQUIET -sOutputFile=$argv[2] $argv[1]
+end
+
+# mssqlctl.fish - Consolidated SQL server control
+function mssqlctl -d "Control MS SQL Server"
+    if test (count $argv) -ne 1
+        echo "Usage: mssqlctl [start|stop|status]"
+        echo "Example: mssqlctl start"
+        return 1
+    end
+    
+    switch $argv[1]
+        case start restart
+            echo "Starting MS SQL Server..."
+            sudo systemctl restart mssql-server.service
+        case stop
+            echo "Stopping MS SQL Server..."
+            sudo systemctl stop mssql-server.service
+        case status
+            echo "MS SQL Server status:"
+        case '*'
+            echo "Error: Unknown command '$argv[1]'"
+            echo "Valid commands: start, stop, status"
+            return 1
+    end
+    
+    # Always show status after any operation
+    systemctl list-units | grep --color mssql
+end
+
+# yesmssql.fish - Wrapper for backward compatibility
+function yesmssql -d "Start MS SQL Server (wrapper for mssqlctl)"
+    mssqlctl start
+end
+
+# nomssql.fish - Wrapper for backward compatibility  
+function nomssql -d "Stop MS SQL Server (wrapper for mssqlctl)"
+    mssqlctl stop
+end
+
+# imgproc.fish - Consolidated image processing
+function imgproc -d "Image processing operations"
+    if test (count $argv) -lt 1
+        echo "Usage: imgproc OPERATION [args...]"
+        echo "Operations:"
+        echo "  resize WIDTH [QUALITY] - Resize images to max width, convert to WebP"
+        echo "  clearmeta              - Strip metadata from JPEGs"
+        echo "  tiny [SIZE]            - Create tiny thumbnails (default 48x38)"
+        echo "  thumbs [SIZE]          - Create larger thumbnails (default 150x100)"
+        echo "  favicon INPUT [OUTPUT] - Create 16x16 favicon"
+        echo "Example: imgproc resize 800 60"
+        return 1
+    end
+
+    set -l operation $argv[1]
+    
+    switch $operation
+        case resize
+            if test (count $argv) -lt 2
+                echo "Error: resize requires WIDTH argument"
+                return 1
+            end
+            set -l width $argv[2]
+            set -l quality 60
+            if test (count $argv) -ge 3
+                set quality $argv[3]
+            end
+            
+            for file in *.{jpg,jpeg,png,gif,bmp}
+                if not test -f $file
+                    continue
+                end
+                
+                set -l ogwidth (identify -format "%w" $file)
+                if test $ogwidth -ge $width
+                    set -l base (path change-extension '' $file)
+                    set -l ext (path extension $file)
+                    
+                    magick $file -resize {$width}x\> -quality $quality tmp.$fish_pid$ext
+                    set -l nuheight (identify -format "%h" tmp.$fish_pid$ext)
+                    cwebp -q $quality -m 6 -mt tmp.$fish_pid$ext -o kf_{$base}_{$width}x{$nuheight}.webp
+                    rm tmp.$fish_pid$ext
+                    echo "Processed $file -> kf_{$base}_{$width}x{$nuheight}.webp"
+                end
+            end
+            
+        case clearmeta
+            for file in *.jpg
+                jpegoptim -pqt --strip-all $file
+            end
+            
+        case tiny
+            set -l size "48x38"
+            if test (count $argv) -ge 2
+                set size $argv[2]
+            end
+            
+            for file in *.jpg
+                if not test -f $file
+                    continue
+                end
+                set -l width (identify -format "%w" $file)
+                set -l height (identify -format "%h" $file)
+                
+                if test $width -ge 49; or test $height -ge 39
+                    set -l base (path change-extension '' $file)
+                    convert -scale $size $file TN_$base.jpg
+                    jpegoptim -pqt --strip-all TN_$base.jpg
+                    echo "Created TN_$base.jpg"
+                end
+            end
+            
+        case thumbs
+            set -l size "150x100"
+            if test (count $argv) -ge 2
+                set size $argv[2]
+            end
+            
+            for file in *.jpg
+                if not test -f $file
+                    continue
+                end
+                set -l width (identify -format "%w" $file)
+                set -l height (identify -format "%h" $file)
+                
+                if test $width -ge 151; or test $height -ge 101
+                    set -l base (path change-extension '' $file)
+                    convert -sample $size $file {$base}_thumb.jpg
+                    jpegoptim -pqt --strip-all {$base}_thumb.jpg
+                    echo "Created {$base}_thumb.jpg"
+                end
+            end
+            
+        case favicon
+            if test (count $argv) -lt 2
+                echo "Error: favicon requires INPUT file"
+                return 1
+            end
+            set -l input $argv[2]
+            set -l output "favicon.ico"
+            if test (count $argv) -ge 3
+                set output $argv[3]
+            end
+            
+            magick convert $input -resize 16x16 -gravity center -crop 16x16+0+0 \
+                -flatten -colors 256 -background transparent $output
+                
+        case '*'
+            echo "Error: Unknown operation '$operation'"
+            return 1
+    end
+end
+
+# Backward compatibility wrappers
+# maxwidthvar.fish
+function maxwidthvar -d "Resize images to max width (wrapper for imgproc)"
+    if test (count $argv) -ne 1
+        echo "Usage: maxwidthvar WIDTH"
+        return 1
+    end
+    imgproc resize $argv[1]
+end
+
+# jpgclearmeta.fish
+function jpgclearmeta -d "Clear JPEG metadata (wrapper for imgproc)"
+    imgproc clearmeta
+end
+
+# jpgtiny.fish
+function jpgtiny -d "Create tiny thumbnails (wrapper for imgproc)"
+    imgproc tiny
+end
+
+# jpegthumbs.fish
+function jpegthumbs -d "Create thumbnails (wrapper for imgproc)"
+    imgproc thumbs
+end
+
+# favico.fish
+function favico -d "Create favicon (wrapper for imgproc)"
+    if test (count $argv) -ne 1
+        echo "Usage: favico INPUT_IMAGE"
+        return 1
+    end
+    imgproc favicon $argv[1]
+end
+
+# audioconv.fish - Consolidated audio conversion
+function audioconv -d "Audio format conversion"
+    if test (count $argv) -lt 1
+        echo "Usage: audioconv OPERATION [args...]"
+        echo "Operations:"
+        echo "  mp3        - Convert WAV/OGG/FLAC to MP3"
+        echo "  shrink     - Compress MP3s for podcasts"
+        echo "  louder FILE - Make MP3 louder"
+        echo "  play [DIR] - Play random audio files"
+        echo "Example: audioconv mp3"
+        return 1
+    end
+
+    set -l operation $argv[1]
+    
+    switch $operation
+        case mp3
+            # Convert various formats to MP3
+            for file in *.{wav,ogg,flac}
+                if not test -f $file
+                    continue
+                end
+                set -l base (path change-extension '' $file)
+                ffmpeg -i $file -vn -ar 44100 -ac 2 -b:a 192k $base.mp3
+                echo "Converted $file -> $base.mp3"
+            end
+            
+        case shrink
+            set -l output_dir "compressed"
+            mkdir -p $output_dir
+            
+            for file in *.mp3
+                if not test -f $file
+                    continue
+                end
+                ffmpeg -n -i $file -metadata genre="Podcast" -ac 1 -ab 40k \
+                    -ar 22050 -id3v2_version 3 -write_id3v1 1 -vsync 2 \
+                    $output_dir/$file
+                echo "Compressed $file -> $output_dir/$file"
+            end
+            
+        case play
+            set -l dir "."
+            if test (count $argv) -ge 2
+                set dir $argv[2]
+            end
+            
+            for file in (find $dir -type f \( -name "*.mp3" -o -name "*.flac" -o -name "*.wav" \) | shuf)
+                echo "Playing: $file"
+                ffplay -autoexit -nodisp $file >/dev/null 2>&1
+            end
+            
+        case '*'
+            echo "Error: Unknown operation '$operation'"
+            return 1
+    end
+end
+
+# Backward compatibility wrappers
+# wav2mp3.fish
+function wav2mp3 -d "Convert WAV to MP3 (wrapper for audioconv)"
+    audioconv mp3
+end
+
+# ogg2mp3.fish
+function ogg2mp3 -d "Convert OGG to MP3 (wrapper for audioconv)"
+    audioconv mp3
+end
+
+# shrinkMP3.fish
+function shrinkMP3 -d "Shrink MP3 files (wrapper for audioconv)"
+    audioconv shrink
+end
+
+# MajorSpoilersShrinkMP3.fish
+function MajorSpoilersShrinkMP3 -d "Shrink MP3 files (wrapper for audioconv)"
+    audioconv shrink
+end
+
+# toonzes.fish
+function toonzes -d "Play random MP3s (wrapper for audioconv)"
+    audioconv play
+end
+
+# crypt.fish - Consolidated encryption/decryption
+function crypt -d "File encryption and decryption"
+    if test (count $argv) -lt 3
+        echo "Usage: crypt OPERATION INPUT OUTPUT"
+        echo "Operations:"
+        echo "  encrypt INPUT OUTPUT - Encrypt file with DES3"
+        echo "  decrypt INPUT OUTPUT - Decrypt file with DES3"
+        echo "Example: crypt encrypt secret.txt secret.enc"
+        return 1
+    end
+
+    set -l operation $argv[1]
+    set -l input $argv[2]
+    set -l output $argv[3]
+
+    if not test -f $input
+        echo "Error: Input file '$input' does not exist"
+        return 1
+    end
+
+    switch $operation
+        case encrypt scramble
+            echo "Encrypting $input -> $output"
+            openssl des3 -salt -in $input -out $output
+        case decrypt descramble
+            echo "Decrypting $input -> $output"
+            openssl des3 -d -in $input -out $output
+        case '*'
+            echo "Error: Unknown operation '$operation'"
+            echo "Valid operations: encrypt, decrypt"
+            return 1
+    end
+end
+
+# Backward compatibility wrappers
+# scramble.fish
+function scramble -d "Encrypt file (wrapper for crypt)"
+    if test (count $argv) -ne 2
+        echo "Usage: scramble INPUT OUTPUT"
+        return 1
+    end
+    crypt encrypt $argv[1] $argv[2]
+end
+
+# descramble.fish
+function descramble -d "Decrypt file (wrapper for crypt)"
+    if test (count $argv) -ne 2
+        echo "Usage: descramble INPUT OUTPUT"
+        return 1
+    end
+    crypt decrypt $argv[1] $argv[2]
+end
+
+# archive.fish - Enhanced archive extraction and operations
+function archive -d "Archive operations"
+    if test (count $argv) -lt 1
+        echo "Usage: archive OPERATION [args...]"
+        echo "Operations:"
+        echo "  extract FILE    - Extract any supported archive"
+        echo "  encrypt IN OUT  - Encrypt with DES3"
+        echo "  decrypt IN OUT  - Decrypt with DES3"
+        echo "Supported formats: tar.bz2, tar.gz, bz2, rar, gz, tar, tbz2, tgz, zip, Z, 7z, xz"
+        echo "Example: archive extract myfile.tar.gz"
+        return 1
+    end
+
+    set -l operation $argv[1]
+
+    switch $operation
+        case extract
+            if test (count $argv) -ne 2
+                echo "Error: extract requires a filename"
+                return 1
+            end
+            
+            set -l file $argv[2]
+            if not test -f $file
+                echo "Error: File '$file' does not exist"
+                return 1
+            end
+
+            echo "Extracting $file..."
+            switch (string lower (path extension $file))
+                case .bz2
+                    if string match -q "*.tar.bz2" $file; or string match -q "*.tbz2" $file
+                        tar xvjf $file
+                    else
+                        bunzip2 $file
+                    end
+                case .gz
+                    if string match -q "*.tar.gz" $file; or string match -q "*.tgz" $file
+                        tar xvzf $file
+                    else
+                        gunzip $file
+                    end
+                case .rar
+                    if command -v unrar >/dev/null
+                        unrar x $file
+                    else
+                        echo "Error: unrar not installed"
+                        return 1
+                    end
+                case .zip
+                    unzip $file
+                case .Z
+                    uncompress $file
+                case .tar
+                    tar xvf $file
+                case .xz
+                    unxz $file
+                case .7z
+                    7z x $file
+                case '*'
+                    echo "Error: Unsupported format for '$file'"
+                    return 1
+            end
+            
+        case encrypt
+            if test (count $argv) -ne 3
+                echo "Error: encrypt requires INPUT and OUTPUT files"
+                return 1
+            end
+            crypt encrypt $argv[2] $argv[3]
+            
+        case decrypt
+            if test (count $argv) -ne 3
+                echo "Error: decrypt requires INPUT and OUTPUT files"
+                return 1
+            end
+            crypt decrypt $argv[2] $argv[3]
+            
+        case '*'
+            echo "Error: Unknown operation '$operation'"
+            return 1
+    end
+end
+
+# pfimpf.fish - Backward compatibility wrapper
+function pfimpf -d "Extract archive (wrapper for archive)"
+    if test (count $argv) -ne 1
+        echo "Usage: pfimpf ARCHIVE_FILE"
+        return 1
+    end
+    archive extract $argv[1]
+end
+
+# fileutil.fish - Consolidated file utilities
+function fileutil -d "File utility operations"
+    if test (count $argv) -lt 1
+        echo "Usage: fileutil OPERATION [args...]"
+        echo "Operations:"
+        echo "  lowercase FILE [FILE2...] - Convert filenames to lowercase"
+        echo "  swap FILE1 FILE2          - Swap two files"
+        echo "  dupe FILE COUNT           - Make COUNT copies of FILE"
+        echo "  epoch TIMESTAMP           - Convert unix timestamp to date"
+        echo "Example: fileutil lowercase *.JPG"
+        return 1
+    end
+
+    set -l operation $argv[1]
+
+    switch $operation
+        case lowercase
+            if test (count $argv) -lt 2
+                echo "Error: lowercase requires at least one filename"
+                return 1
+            end
+            
+            for file in $argv[2..-1]
+                if not test -e $file
+                    echo "Warning: '$file' does not exist, skipping"
+                    continue
+                end
+                
+                set -l new (string lower $file)
+                if test $file != $new
+                    mv $file $new
+                    echo "Renamed: $file -> $new"
+                else
+                    echo "No change: $file"
+                end
+            end
+            
+        case swap
+            if test (count $argv) -ne 3
+                echo "Error: swap requires exactly 2 filenames"
+                return 1
+            end
+            
+            set -l file1 $argv[2]
+            set -l file2 $argv[3]
+            
+            if not test -e $file1
+                echo "Error: '$file1' does not exist"
+                return 1
+            end
+            if not test -e $file2
+                echo "Error: '$file2' does not exist"
+                return 1
+            end
+            
+            set -l tmp tmp.$fish_pid
+            mv $file1 $tmp
+            mv $file2 $file1
+            mv $tmp $file2
+            echo "Swapped: $file1 <-> $file2"
+            
+        case dupe
+            if test (count $argv) -ne 3
+                echo "Error: dupe requires FILE and COUNT"
+                return 1
+            end
+            
+            set -l file $argv[2]
+            set -l count $argv[3]
+            
+            if not test -f $file
+                echo "Error: '$file' does not exist"
+                return 1
+            end
+            
+            for i in (seq 1 $count)
+                cp $file $i$file
+                echo "Created: $i$file"
+            end
+            
+        case epoch
+            if test (count $argv) -ne 2
+                echo "Error: epoch requires a timestamp"
+                return 1
+            end
+            date --date=@$argv[2]
+            
+        case '*'
+            echo "Error: Unknown operation '$operation'"
+            return 1
+    end
+end
+
+# Backward compatibility wrappers
+# lowercase.fish
+function lowercase -d "Convert filenames to lowercase (wrapper for fileutil)"
+    fileutil lowercase $argv
+end
+
+# swap.fish
+function swap -d "Swap two files (wrapper for fileutil)"
+    if test (count $argv) -ne 2
+        echo "Usage: swap FILE1 FILE2"
+        return 1
+    end
+    fileutil swap $argv[1] $argv[2]
+end
+
+# dupe.fish
+function dupe -d "Duplicate files (wrapper for fileutil)"
+    if test (count $argv) -ne 2
+        echo "Usage: dupe FILE COUNT"
+        return 1
+    end
+    fileutil dupe $argv[1] $argv[2]
+end
+
+# epoch.fish
+function epoch -d "Convert unix timestamp (wrapper for fileutil)"
+    if test (count $argv) -ne 1
+        echo "Usage: epoch TIMESTAMP"
+        return 1
+    end
+    fileutil epoch $argv[1]
+end
+
+# finder.fish - Consolidated search operations
+function finder -d "Enhanced search functions"
+    if test (count $argv) -lt 1
+        echo "Usage: finder OPERATION [args...]"
+        echo "Operations:"
+        echo "  name PATTERN              - Find files by name"
+        echo "  exec PATTERN COMMAND      - Find files and execute command"
+        echo "  content [-i] PATTERN [EXT] - Find by content (use -i for case-insensitive)"
+        echo "Example: finder name '*.mp3'"
+        echo "Example: finder content -i 'TODO' '*.txt'"
+        return 1
+    end
+
+    set -l operation $argv[1]
+
+    switch $operation
+        case name
+            if test (count $argv) -lt 2
+                echo "Error: name requires a pattern"
+                return 1
+            end
+            find . -type f -iname "*$argv[2]*" -ls
+            
+        case exec
+            if test (count $argv) -lt 3
+                echo "Error: exec requires pattern and command"
+                return 1
+            end
+            find . -type f -iname "*$argv[2]*" -exec $argv[3..-1] {} \;
+            
+        case content
+            set -l case_flag ""
+            set -l pattern_idx 2
+            set -l ext_pattern "*"
+            
+            # Check for case-insensitive flag
+            if test (count $argv) -ge 2; and test $argv[2] = "-i"
+                set case_flag "-i"
+                set pattern_idx 3
+            end
+            
+            if test (count $argv) -lt $pattern_idx
+                echo "Error: content requires a search pattern"
+                return 1
+            end
+            
+            set -l pattern $argv[$pattern_idx]
+            
+            # Check for file extension pattern
+            if test (count $argv) -gt $pattern_idx
+                set ext_pattern $argv[(math $pattern_idx + 1)]
+            end
+            
+            find . -type f -name $ext_pattern -print0 | \
+                xargs -0 grep --color=always -sn $case_flag $pattern 2>/dev/null | more
+                
+        case '*'
+            echo "Error: Unknown operation '$operation'"
+            return 1
+    end
+end
+
+# Backward compatibility wrappers
+# ff.fish
+function ff -d "Find files by name (wrapper for finder)"
+    if test (count $argv) -ne 1
+        echo "Usage: ff PATTERN"
+        return 1
+    end
+    finder name $argv[1]
+end
+
+# fe.fish
+function fe -d "Find and execute (wrapper for finder)"
+    if test (count $argv) -lt 2
+        echo "Usage: fe PATTERN COMMAND [ARGS...]"
+        return 1
+    end
+    finder exec $argv
+end
+
+# fstr.fish
+function fstr -d "Find string in files (wrapper for finder)"
+    if test (count $argv) -eq 0
+        echo "Usage: fstr [-i] PATTERN [FILE_PATTERN]"
+        return 1
+    end
+    finder content $argv
+end
+
+# ncfstr.fish
+function ncfstr -d "Find string in files without color (wrapper for finder)"
+    if test (count $argv) -eq 0
+        echo "Usage: ncfstr [-i] PATTERN [FILE_PATTERN]"
+        return 1
+    end
+    # Use finder but strip colors
+    finder content $argv | sed 's/\x1b\[[0-9;]*m//g'
+end
+
+# sysmgmt.fish - The mother of all system management
+function sysmgmt -d "Comprehensive system management"
+    if test (count $argv) -lt 1
+        echo "Usage: sysmgmt OPERATION [args...]"
+        echo "Operations:"
+        echo "  search PACKAGE     - Search for packages"
+        echo "  install PACKAGE... - Install packages"
+        echo "  reinstall PACKAGE... - Reinstall packages"
+        echo "  remove PACKAGE...  - Remove packages completely"
+        echo "  upgrade           - Full system upgrade"
+        echo "  info PACKAGE      - Show package info"
+        echo "  desktop           - Show desktop environment info"
+        echo "  pid PROCESS       - Show process info in top"
+        echo "Example: sysmgmt install vim git"
+        return 1
+    end
+
+    # Detect package manager once and cache it
+    set -l pkg_manager
+    if command -v pacman >/dev/null 2>&1
+        set pkg_manager "pacman"
+    else if command -v apt >/dev/null 2>&1
+        set pkg_manager "apt"
+    else if command -v dnf5 >/dev/null 2>&1
+        set pkg_manager "dnf5"
+    else if command -v dnf >/dev/null 2>&1
+        set pkg_manager "dnf"
+    else if command -v zypper >/dev/null 2>&1
+        set pkg_manager "zypper"
+    else
+        echo "Error: No supported package manager found"
+        return 1
+    end
+
+    set -l operation $argv[1]
+
+    switch $operation
+        case search tellme
+            if test (count $argv) -lt 2
+                echo "Error: search requires a package name"
+                return 1
+            end
+            
+            echo "Searching for '$argv[2]' using $pkg_manager..."
+            switch $pkg_manager
+                case apt
+                    apt search $argv[2]
+                case pacman
+                    pacman -Ss $argv[2]
+                case dnf dnf5
+                    $pkg_manager search $argv[2]
+                case zypper
+                    zypper search $argv[2]
+            end
+
+        case install gimme
+            if test (count $argv) -lt 2
+                echo "Error: install requires at least one package name"
+                return 1
+            end
+            
+            echo "Installing packages with $pkg_manager: $argv[2..-1]"
+            switch $pkg_manager
+                case apt
+                    sudo apt update && sudo apt install -y $argv[2..-1] && sudo apt clean
+                case pacman
+                    sudo pacman -S --noconfirm $argv[2..-1] && sudo pacman -Scc --noconfirm
+                case dnf dnf5
+                    sudo $pkg_manager install -y $argv[2..-1] && sudo $pkg_manager clean all
+                case zypper
+                    sudo zypper install -y $argv[2..-1] && sudo zypper clean --all
+            end
+
+        case reinstall tryagain
+            if test (count $argv) -lt 2
+                echo "Error: reinstall requires at least one package name"
+                return 1
+            end
+            
+            echo "Reinstalling packages with $pkg_manager: $argv[2..-1]"
+            switch $pkg_manager
+                case apt
+                    sudo apt update && sudo apt reinstall -y $argv[2..-1] && sudo apt clean
+                case pacman
+                    sudo pacman -S --noconfirm $argv[2..-1] && sudo pacman -Scc --noconfirm
+                case dnf dnf5
+                    sudo $pkg_manager reinstall -y $argv[2..-1] && sudo $pkg_manager clean all
+                case zypper
+                    sudo zypper install -y --force $argv[2..-1] && sudo zypper clean --all
+            end
+
+        case remove nuke
+            if test (count $argv) -lt 2
+                echo "Error: remove requires at least one package name"
+                return 1
+            end
+            
+            echo "Removing packages with $pkg_manager: $argv[2..-1]"
+            switch $pkg_manager
+                case apt
+                    sudo apt purge -y --auto-remove $argv[2..-1] && sudo apt autoremove --purge -y && sudo apt clean
+                case pacman
+                    sudo pacman -Rns --noconfirm $argv[2..-1] && sudo pacman -Scc --noconfirm
+                case dnf dnf5
+                    sudo $pkg_manager remove -y $argv[2..-1] && sudo $pkg_manager autoremove -y && sudo $pkg_manager clean all
+                case zypper
+                    sudo zypper remove -y $argv[2..-1] && sudo zypper clean --all
+            end
+
+        case upgrade iago
+            echo "Performing full system upgrade with $pkg_manager..."
+            switch $pkg_manager
+                case apt
+                    echo "=> Updating repos..."
+                    sudo apt update
+                    echo "==> Removing unnecessary packages..."
+                    sudo apt autoremove -y
+                    echo "===> Performing full upgrade..."
+                    sudo apt full-upgrade -y
+                    echo "====> Cleaning up..."
+                    sudo apt autoremove --purge -y && sudo apt clean
+                case pacman
+                    echo "=> Updating repos..."
+                    sudo pacman -Syy
+                    echo "==> Removing orphans..."
+                    set -l orphans (pacman -Qtdq 2>/dev/null)
+                    if test -n "$orphans"
+                        sudo pacman -Rns --noconfirm $orphans
+                    end
+                    echo "===> Performing upgrade..."
+                    sudo pacman -Syu --noconfirm
+                    echo "====> Cleaning up..."
+                    sudo pacman -Scc --noconfirm
+                case dnf dnf5
+                    echo "=> Checking updates..."
+                    sudo $pkg_manager check-update
+                    echo "==> Removing unnecessary packages..."
+                    sudo $pkg_manager autoremove -y
+                    echo "===> Performing upgrade..."
+                    sudo $pkg_manager upgrade --refresh -y
+                    echo "====> Cleaning up..."
+                    sudo $pkg_manager clean all
+                case zypper
+                    echo "=> Refreshing repos..."
+                    sudo zypper refresh
+                    echo "==> Removing unnecessary packages..."
+                    sudo zypper remove -u
+                    echo "===> Performing upgrade..."
+                    sudo zypper update -y
+                    echo "====> Cleaning up..."
+                    sudo zypper clean --all
+            end
+
+        case info
+            if test (count $argv) -lt 2
+                echo "Error: info requires a package name"
+                return 1
+            end
+            
+            switch $pkg_manager
+                case apt
+                    apt show $argv[2]
+                case pacman
+                    pacman -Si $argv[2]
+                case dnf dnf5
+                    $pkg_manager info $argv[2]
+                case zypper
+                    zypper info $argv[2]
+            end
+
+        case desktop wutdt
+            echo "Desktop Environment Info:"
+            echo "Desktop: $XDG_CURRENT_DESKTOP"
+            echo "Session: $GDMSESSION"
+            echo "Display Server: $XDG_SESSION_TYPE"
+            
+        case pid gettoppid
+            if test (count $argv) -lt 2
+                echo "Error: pid requires a process name"
+                return 1
+            end
+            top -p (pgrep -d , $argv[2])
+
+        case '*'
+            echo "Error: Unknown operation '$operation'"
+            echo "Valid operations: search, install, reinstall, remove, upgrade, info, desktop, pid"
+            return 1
+    end
+end
+
+# utils.fish - Consolidated utilities
+function utils -d "Miscellaneous utility functions"
+    if test (count $argv) -lt 1
+        echo "Usage: utils OPERATION [args...]"
+        echo "Operations:"
+        echo "  words              - Generate random word list"
+        echo "  pony               - Show pony with fortune"
+        echo "  guid [COUNT]       - Generate GUIDs (default: 1)"
+        echo "  history PATTERN    - Search command history"
+        echo "  json FILE          - Pretty-print JSON"
+        echo "  tail FILE [LINES]  - Cut last N lines (default: 20)"
+        echo "Example: utils guid 5"
+        return 1
+    end
+
+    set -l operation $argv[1]
+
+    switch $operation
+        case words wordlist
+            echo "Generating random word list..."
+            fortune -l -n 145 | string upper | string split " " | \
+                string replace -r '\W' '' | grep -E '.{5}' | sort -u | shuf
+
+        case pony ponies
+            echo "PONIES!!!"
+            fortune | ponythink -b unicode
+
+        case guid guidmaker
+            set -l count 1
+            if test (count $argv) -ge 2
+                set count $argv[2]
+            end
+            echo "Generating $count GUID(s)..."
+            for i in (seq 1 $count)
+                uuidgen -r | string upper
+            end
+
+        case history hs
+            if test (count $argv) -lt 2
+                echo "Error: history requires a search pattern"
+                return 1
+            end
+            history | grep $argv[2]
+
+        case json purtyjson
+            if test (count $argv) -lt 2
+                echo "Error: json requires a filename"
+                return 1
+            end
+            if not test -f $argv[2]
+                echo "Error: File '$argv[2]' does not exist"
+                return 1
+            end
+            python -m json.tool $argv[2]
+
+        case tail cuttail
+            if test (count $argv) -lt 2
+                echo "Error: tail requires a filename"
+                return 1
+            end
+            set -l lines 20
+            if test (count $argv) -ge 3
+                set lines $argv[3]
+            end
+            sed -n -e :a -e "1,$lines!{P;N;D;};N;ba" $argv[2]
+
+        case '*'
+            echo "Error: Unknown operation '$operation'"
+            return 1
+    end
+end
+
+# Massive wrapper collection for backward compatibility
+# tellme.fish
+function tellme -d "Search for packages (wrapper for sysmgmt)"
+    sysmgmt search $argv
+end
+
+# gimme.fish
+function gimme -d "Install packages (wrapper for sysmgmt)"
+    sysmgmt install $argv
+end
+
+# tryagain.fish
+function tryagain -d "Reinstall packages (wrapper for sysmgmt)"
+    sysmgmt reinstall $argv
+end
+
+# nuke.fish
+function nuke -d "Remove packages (wrapper for sysmgmt)"
+    sysmgmt remove $argv
+end
+
+# iago.fish
+function iago -d "System upgrade (wrapper for sysmgmt)"
+    sysmgmt upgrade
+end
+
+# wutdt.fish
+function wutdt -d "Show desktop info (wrapper for sysmgmt)"
+    sysmgmt desktop
+end
+
+# gettoppid.fish
+function gettoppid -d "Show process info (wrapper for sysmgmt)"
+    sysmgmt pid $argv
+end
+
+# wordlist.fish (updated wrapper)
+function wordlist -d "Generate word list (wrapper for utils)"
+    utils words
+end
+
+# ponies.fish (updated wrapper)
+function ponies -d "Show ponies (wrapper for utils)"
+    utils pony
+end
+
+# guidmaker.fish (updated wrapper)
+function guidmaker -d "Generate GUIDs (wrapper for utils)"
+    if test (count $argv) -eq 0
+        utils guid 1
+    else
+        utils guid $argv[1]
+    end
+end
+
+# hs.fish
+function hs -d "History search (wrapper for utils)"
+    utils history $argv
+end
+
+# purtyjson.fish
+function purtyjson -d "Pretty JSON (wrapper for utils)"
+    utils json $argv
+end
+
+# cuttail.fish
+function cuttail -d "Cut tail lines (wrapper for utils)"
+    utils tail $argv
+end
+
+# Special install functions (keeping these separate because they're complex)
+# install_vim.fish - Your monster Vim installer
+function install_vim -d "Install/update latest Vim from source"
+    echo "Installing/updating Vim from source..."
+    
+    # Install dependencies
+    sudo apt update && \
+    sudo apt install -y \
+        libncurses5-dev libgtk2.0-dev libatk1.0-dev \
+        libcairo2-dev libx11-dev libxpm-dev libxt-dev \
+        python3-dev ruby-dev lua5.3 liblua5.3-dev \
+        libperl-dev git build-essential cmake clang \
+        libclang-dev
+
+    # Clean existing installations
+    sudo apt purge -y vim vim-runtime gvim vim-tiny vim-common vim-gui-common vim-nox
+    sudo apt autoremove -y
+
+    # Set up source directory
+    set -l vim_src "$HOME/src/vim"
+    if not test -d $vim_src
+        git clone https://github.com/vim/vim.git $vim_src
+    end
+
+    # Update repository
+    cd $vim_src
+    git pull --rebase
+    git submodule update --init --recursive
+
+    # Clean build
+    make clean distclean
+
+    # Configure and build
+    ./configure \
+        --with-features=huge \
+        --enable-multibyte \
+        --enable-rubyinterp=yes \
+        --with-x \
+        --enable-perlinterp=yes \
+        --enable-luainterp=yes \
+        --enable-gui=gtk2 \
+        --enable-cscope \
+        --prefix=/usr/local \
+        --enable-python3interp=yes \
+        --with-python3-config-dir=(python3-config --configdir) \
+        --with-python3-command=python3
+
+    make && sudo make install
+
+    # Set as default
+    sudo update-alternatives --install /usr/bin/editor editor /usr/local/bin/vim 1
+    sudo update-alternatives --set editor /usr/local/bin/vim
+    sudo update-alternatives --install /usr/bin/vi vi /usr/local/bin/vim 1
+    sudo update-alternatives --set vi /usr/local/bin/vim
+
+    echo "Vim installation completed!"
+end
+
+# install_ycm.fish - YouCompleteMe installer
+function install_ycm -d "Install/update YouCompleteMe"
+    echo "Setting up YouCompleteMe..."
+
+    # Install dependencies
+    sudo apt install -y \
+        mono-complete openjdk-17-jdk \
+        shellcheck golang nodejs npm
+
+    npm install -g npm@latest
+
+    # Install/update YCM
+    set -l ycm_dir "$HOME/.vim/bundle/YouCompleteMe"
+    if not test -d $ycm_dir
+        vim +PluginInstall +qall
+    else
+        vim +PluginUpdate +qall
+    end
+
+    # Build YCM
+    cd $ycm_dir
+    python3 install.py --all
+
+    echo "YouCompleteMe setup completed!"
+end
+
+# wz.fish - Warzone2100 installer (keeping your exact logic)
+function wz -d "Install/update Warzone2100 from source"
+    cd "$HOME/src"
+    set -l wz_source "$HOME/src/warzone2100"
+    
+    if test -d $wz_source
+        cd $wz_source
+        git remote update -p
+        git merge --ff-only '@{u}'
+        git submodule update --init --recursive
+    else
+        git clone --recurse-submodules --depth 1 \
+            https://github.com/Warzone2100/warzone2100 $wz_source
+        cd $wz_source
+    end
+
+    sudo ./get-dependencies_linux.sh ubuntu build-all
+    mkdir -p build
+    cd build
+    cmake \
+        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+        -DCMAKE_INSTALL_PREFIX:PATH=/opt/warzone2100-latest \
+        -GNinja ..
+    
+    sudo cmake --build . --target install
+    cd
+end
+
