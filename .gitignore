@@ -446,3 +446,4 @@ dw_php_codehinting.config
 
 #miscellaneous
 .well-known/
+bash/.git-credentials
