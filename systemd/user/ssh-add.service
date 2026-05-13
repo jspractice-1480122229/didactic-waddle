@@ -1,0 +1,13 @@
+[Unit]
+Description=Load SSH keys into agent
+Requires=ssh-agent.service
+After=ssh-agent.service
+
+[Service]
+Type=oneshot
+Environment=SSH_AUTH_SOCK=%t/ssh-agent.socket
+ExecStart=/usr/bin/ssh-add %h/.ssh/id_ed25519 %h/.ssh/id_ed25519_didactic_waddle
+RemainAfterExit=yes
+
+[Install]
+WantedBy=default.target
