@@ -206,6 +206,16 @@ main() {
         fi
     done
 
+    log_info "Downloading cross-distro-vim-ycm.sh to ~/binnie/..."
+    mkdir -p "${HOME}/binnie"
+    local vim_ycm_url="https://raw.githubusercontent.com/jspractice-1480122229/didactic-waddle/trunk/bash/cross-distro-vim-ycm.sh"
+    if wget -q "${vim_ycm_url}" -O "${HOME}/binnie/cross-distro-vim-ycm.sh"; then
+        chmod +x "${HOME}/binnie/cross-distro-vim-ycm.sh"
+        log_info "Downloaded cross-distro-vim-ycm.sh"
+    else
+        log_warn "Failed to download cross-distro-vim-ycm.sh"
+    fi
+
     # Create minimal .bashrc that sources repo config files
     if [[ -f "${HOME}/.bashrc" ]]; then
         local timestamp; timestamp=$(date +%Y%m%d_%H%M%S)
