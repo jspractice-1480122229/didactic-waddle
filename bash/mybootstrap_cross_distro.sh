@@ -270,6 +270,17 @@ else
 end
 EOL
 
+    log_info "Downloading fish functions..."
+    local fish_functions_url_base="https://raw.githubusercontent.com/jspractice-1480122229/didactic-waddle/trunk/fish/functions"
+    local fish_functions=("install_vim.fish" "install_ycm.fish")
+    for fn in "${fish_functions[@]}"; do
+        if wget -q "${fish_functions_url_base}/${fn}" -O "${fish_config_dir}/functions/${fn}"; then
+            log_info "Downloaded ${fn}"
+        else
+            log_warn "Failed to download ${fn}"
+        fi
+    done
+
     cat > "$fish_config_dir/functions/wrappers.fish" << 'EOL'
 # Fish function wrappers for standalone scripts
 function media; bmedia $argv; end
