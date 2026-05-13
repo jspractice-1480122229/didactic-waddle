@@ -279,7 +279,14 @@ parse_args() {
       --list-modules) LIST_MODULES=1 ;;
       --help-module) shift; HELP_MODULE="${1:-}";;
       --help-module=*) HELP_MODULE="${1#*=}" ;;
-      --mod) shift; SELECTED_MODULES+=("${1:?missing module name}") ;;
+      --mod)
+        if [[ -z "${2:-}" || "${2:-}" == --* ]]; then
+          LIST_MODULES=1
+        else
+          shift
+          SELECTED_MODULES+=("$1")
+        fi
+        ;;
       --mod=*) SELECTED_MODULES+=("${1#*=}") ;;
       --help|-h)
         cat <<'EOF'
