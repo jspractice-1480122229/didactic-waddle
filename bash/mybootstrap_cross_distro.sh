@@ -30,7 +30,8 @@ detect_latest_jdk() {
     local pkg_manager="$1"
     case "$pkg_manager" in
         "apt") apt-cache search "^openjdk-[0-9]+-jdk$" 2>/dev/null | grep -oE 'openjdk-[0-9]+-jdk' | sort -V | tail -1 || echo "openjdk-11-jdk" ;;
-        "dnf") dnf list available 2>/dev/null | grep -oE 'java-[0-9]+-openjdk-devel' | sort -V | tail -1 || echo "java-11-openjdk-devel" ;;
+        "dnf5") dnf5 list available 2>/dev/null | grep -oE 'java-[0-9]+-openjdk-devel' | sort -V | tail -1 || echo "java-17-openjdk-devel" ;;
+        "dnf")  dnf  list available 2>/dev/null | grep -oE 'java-[0-9]+-openjdk-devel' | sort -V | tail -1 || echo "java-17-openjdk-devel" ;;
         "pacman") pacman -Ss 2>/dev/null | grep -oE 'jdk[0-9]+-openjdk' | sort -V | tail -1 || echo "jdk11-openjdk" ;;
         "zypper") zypper search 2>/dev/null | grep -oE 'java-[0-9]+-openjdk-devel' | sort -V | tail -1 || echo "java-11-openjdk-devel" ;;
         *) echo "openjdk-11-jdk" ;;
@@ -124,7 +125,7 @@ setup_ssh_agent() {
 }
 
 main() {
-    log_info "Bootstrap v3.7 (Node.js Purged, JDK Dynamic) starting..."
+    log_info "Bootstrap v3.8 starting..."
     local pkg_manager
     pkg_manager=$(detect_distro)
     log_info "Detected package manager: $pkg_manager"
@@ -152,7 +153,7 @@ main() {
             util_packages=("colordiff" "fortune-mod" "uuid-runtime" "unrar" "p7zip-full")
             python_build_deps=("libssl-dev" "libncurses-dev" "libsqlite3-dev" "libreadline-dev" "tk-dev" "libgdbm-dev" "libdb-dev" "libbz2-dev" "libexpat1-dev" "liblzma-dev" "zlib1g-dev" "libffi-dev")
             ;;
-        "dnf")
+        "dnf5"|"dnf")
             media_packages=("yt-dlp" "ffmpeg" "lame" "ghostscript" "libwebp-tools" "ImageMagick" "jpegoptim" "cowsay" "perl-Image-ExifTool")
             dev_packages=("python3" "python3-pip" "golang" "codium" "microsoft-edge-stable" "$jdk_package")
             shell_packages=("fzf" "podman" "podman-compose" "starship")
@@ -179,13 +180,14 @@ main() {
     local all_packages=("${core_packages[@]}" "${media_packages[@]}" "${dev_packages[@]}" "${util_packages[@]}" "${shell_packages[@]}" "${python_build_deps[@]}")
     log_info "Installing main packages (including $jdk_package)..."
     case "$pkg_manager" in
-        apt) sudo apt update && sudo apt install -y "${all_packages[@]}" ;;
-        dnf) sudo dnf install -y "${all_packages[@]}" ;;
+        apt)    sudo apt update && sudo apt install -y "${all_packages[@]}" ;;
+        dnf5)   sudo dnf5 install -y "${all_packages[@]}" ;;
+        dnf)    sudo dnf  install -y "${all_packages[@]}" ;;
         pacman) sudo pacman -S --needed --noconfirm "${all_packages[@]}" ;;
         zypper) sudo zypper install -y "${all_packages[@]}" ;;
     esac
 
-    if [[ "$pkg_manager" == "pacman" && ${#aur_packages[@]} -gt 0 ]]; then
+    if [[ "$pkg_manager" == "pacman" && ${#aur_packages[@]:-0} -gt 0 ]]; then
         install_aur_helper
         log_info "Installing AUR packages..."
         paru -S --noconfirm "${aur_packages[@]}"
