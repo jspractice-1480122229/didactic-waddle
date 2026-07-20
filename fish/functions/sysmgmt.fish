@@ -124,16 +124,28 @@ function sysmgmt -d "Comprehensive system management"
                     echo "====> Cleaning up..."
                     sudo apt autoremove --purge -y && sudo apt clean
                 case pacman
-                    echo "=> Updating repos..."
+                    # Handle AUR packages if helpers are installed
+                    echo "=> Upgrading AUR packages..."
+                    if command -v paru >/dev/null 2>&1
+                        echo "==> Upgrading with paru..."
+                        paru -Syu --noconfirm
+                        rd ~/.cache/paru/clone
+                    else if command -v yay >/dev/null 2>&1
+                        echo "==> Upgrading with yay..."
+                        yay -Syu --noconfirm
+                    else
+                        echo "==> No AUR helper found (paru/yay)"
+                    end
+                    echo "===> Updating repos..."
                     sudo pacman -Syy
-                    echo "==> Removing orphans..."
+                    echo "====> Removing orphans..."
                     set -l orphans (pacman -Qtdq 2>/dev/null)
                     if test -n "$orphans"
                         sudo pacman -Rns --noconfirm $orphans
                     end
-                    echo "===> Performing upgrade..."
+                    echo "=====> Performing upgrade..."
                     sudo pacman -Syu --noconfirm
-                    echo "====> Cleaning up..."
+                    echo "======> Cleaning up..."
                     sudo pacman -Scc --noconfirm
                 case dnf dnf5
                     echo "=> Checking updates..."
