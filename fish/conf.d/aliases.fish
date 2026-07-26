@@ -54,38 +54,10 @@ alias lu 'eza --long --sort=accessed --reverse'           # Sort by access time
 # Other
 alias lr 'eza --long --recurse --git'                     # Recursive ls
 alias lm 'eza --long --all --git --color=always | more'   # Pipe through 'more'
-
-# Enable color support of ls and also add handy aliases
-if status is-interactive; and command -v dircolors >/dev/null
-    if test -r ~/.dircolors
-        eval (dircolors -c ~/.dircolors)
-    else
-        eval (dircolors -c)
-    end
-    # classify files in color
-    alias ls 'ls -aghlAFGH --color=tty --group-directories-first'
-end
-
-# Alias for eza with default options to list files.
-alias l 'eza --classify --color-scale'
-
-# Alias for eza with specific options to provide detailed directory listings.
-alias l.="eza -a | grep -e '^.'" # show only dotfiles
-alias lh 'eza -Al'  # Show hidden files
-alias lc 'eza -ltcr' # Sort by change time, most recent last
-alias lk 'eza -lSr'  # Sort by size, biggest last
-alias ldir 'eza -l --group-directories-first'
-alias lm 'eza -al | more'  # Pipe through more for pagination
-alias lr 'eza -lR'      # Recursive listing
-alias lt 'eza --long --sort=modified --reverse'  # Sort by date, most recent last
-alias lu 'eza -ltur' # Sort by access time, most recent last
-alias lx 'eza -lXB'  # Sort by extension
-
-# Alias for eza in vertical format.
-alias dir 'eza --color auto --format vertical'
-
-# Alias for eza in long format.
-alias vdir 'eza --color auto --format long'
+alias lt 'eza --long --sort=modified --reverse'           # Sort by date, most recent last (short for ltime)
+alias lh 'eza -Al'                                        # Show hidden files
+alias ldir 'eza -l --group-directories-first'             # Directories first
+alias l. 'eza -a | grep -e "^\."'                         # Show only dotfiles
 
 alias ......='cd ../../../../..'
 alias .....='cd ../../../..'

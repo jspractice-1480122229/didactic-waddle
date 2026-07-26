@@ -5,7 +5,7 @@ set -g fish_greeting
 
 # Set environment variables
 set -x EDITOR vim
-set -x VISUAL gvim
+set -x VISUAL codium
 set -x GOPATH $HOME/go
 set -x PYENV_ROOT "$HOME/.pyenv"
 
@@ -18,6 +18,10 @@ fish_add_path -p "$GOPATH/bin"
 fish_add_path -p "$HOME/.cargo/bin"
 fish_add_path -p "$HOME/.local/bin"
 fish_add_path -p "$HOME/binnie/google-cloud-sdk/bin"
+fish_add_path -p "$HOME/src/ai-dev-scripted-tools"
+# opencode
+fish_add_path -p "$HOME/.opencode/bin"
+fish_add_path -p "$HOME/bin"
 
 # Starship prompt
 starship init fish | source
@@ -71,8 +75,6 @@ function bt-reset
     echo "connect DC:FF:6B:DB:90:C1" | bluetoothctl
 end
 
-fish_add_path ~/bin
-
 alias autorandr='/usr/bin/python3 /usr/bin/autorandr'
 
 # Open Edge as Personal
@@ -80,6 +82,3 @@ alias edge-pers="microsoft-edge-stable --profile-directory='Default'"
 
 # Open Edge as Contract (The directory name might be 'Profile 1' or 'Profile 2')
 alias edge-work="microsoft-edge-stable --profile-directory='Profile 1'"
-
-# opencode
-fish_add_path /home/rex/.opencode/bin
