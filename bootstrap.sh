@@ -62,6 +62,12 @@ detect_pkg_manager() {
   else log_error "Unsupported package manager." && exit 1; fi
 }
 
+# apt/pacman/etc. say nothing about init system — e.g. antiX runs apt without
+# systemd. Modules that assume `systemctl --user` (ssh_agent) need this.
+detect_init_system() {
+  if [[ -d /run/systemd/system ]]; then echo "systemd"; else echo "other"; fi
+}
+
 # ------------------------
 # Your functions (kept, only lightly adjusted)
 # ------------------------
@@ -173,7 +179,7 @@ module_desc() {
     scripts_bin)            echo "Download your ~/.local/bin helper scripts" ;;
     dotfiles_bashrc)        echo "Backup and download the repo's full bash/ config (bashrc, aliases, functions, personal overlays)" ;;
     dotfiles_fish)          echo "Generate fish config.fish + aliases + download fish functions" ;;
-    ssh_agent)              echo "Download SSH config + systemd ssh-agent/ssh-add units; enable on login" ;;
+    ssh_agent)              echo "Download SSH config + persistent ssh-agent (systemd units, or a portable fallback on non-systemd inits); guards against xfce4-session's and GNOME/gcr4's competing agents" ;;
     vim_ycm)                echo "Download cross-distro-vim-ycm.sh to ~/binnie/ + install_vim/ycm fish functions" ;;
     rust)                   echo "Install rustup toolchain (cargo available)" ;;
     rust_tools)             echo "Modern CLI tools via pkgs else cargo (skips cargo if binary exists)" ;;
@@ -222,8 +228,26 @@ print_module_help() {
     ssh_agent)
       printf "Notes:\n"
       printf "  - Downloads ssh/config from repo to ~/.ssh/config (backs up existing).\n"
-      printf "  - Downloads systemd/user/ssh-agent.service and ssh-add.service.\n"
-      printf "  - Enables and starts both services via systemctl --user.\n"
+      printf "  - If xfce4-session is present, disables its built-in ssh-agent\n"
+      printf "    auto-launch (xfconf /startup/ssh-agent/enabled) so it stops racing\n"
+      printf "    our agent for SSH_AUTH_SOCK on every login.\n"
+      printf "  - On systemd hosts: disables gcr-ssh-agent.socket/.service if present\n"
+      printf "    (GNOME 46+'s built-in ssh-agent, moved out of gnome-keyring into\n"
+      printf "    gcr4; also pulled in by some Cinnamon/MATE setups) since it claims\n"
+      printf "    SSH_AUTH_SOCK the same way ours does. KDE's ssh-agent (gpg-agent's\n"
+      printf "    enable-ssh-support) is opt-in, not on by default, so it's left alone.\n"
+      printf "    Then downloads systemd/user/ssh-agent.service and enables + starts\n"
+      printf "    it via systemctl --user. Keys load lazily: ssh/config's\n"
+      printf "    AddKeysToAgent yes adds a key (prompting for its passphrase) the\n"
+      printf "    first time it's actually used, rather than an eager ssh-add at\n"
+      printf "    boot — a systemd service can't prompt for a passphrase without an\n"
+      printf "    askpass helper and a display, so eager loading isn't reliable here.\n"
+      printf "  - On non-systemd hosts (e.g. antiX/sysvinit, runit): downloads\n"
+      printf "    ssh/agent-init.sh to ~/.ssh/ and wires it into ~/.bash_profile\n"
+      printf "    (and ~/.config/fish/config.fish via ssh_agent_ensure.fish, if fish\n"
+      printf "    dotfiles are deployed). It reuses any already-reachable agent\n"
+      printf "    (e.g. one a desktop session already started) or starts one and\n"
+      printf "    caches its env for reuse across shells.\n"
       ;;
     vim_ycm)
       printf "Notes:\n"
@@ -412,10 +436,22 @@ plan_dotfiles_fish() {
 }
 
 plan_ssh_agent() {
-  add_action "Download SSH config and systemd ssh-agent/ssh-add units; enable on login"
+  add_action "Download SSH config; set up a persistent ssh-agent appropriate to this init system"
   add_write "backup_download" "$HOME/.ssh/config"
-  add_write "write" "$HOME/.config/systemd/user/ssh-agent.service"
-  add_write "write" "$HOME/.config/systemd/user/ssh-add.service"
+
+  if command -v xfconf-query &>/dev/null; then
+    add_action "Detected XFCE tooling: will disable its built-in ssh-agent auto-launch (xfce4-session), which otherwise races our own agent for SSH_AUTH_SOCK"
+  fi
+
+  if [[ "$(detect_init_system)" == "systemd" ]]; then
+    if command -v systemctl &>/dev/null && systemctl --user list-unit-files gcr-ssh-agent.socket &>/dev/null; then
+      add_action "Detected gcr-ssh-agent.socket (GNOME/gcr4's built-in ssh-agent): will disable it, which otherwise races our own agent for SSH_AUTH_SOCK"
+    fi
+    add_write "write" "$HOME/.config/systemd/user/ssh-agent.service"
+  else
+    add_action "NOTE: no systemd user session detected — using the portable ssh-agent fallback (cached agent env reused across shells) instead of systemd units"
+    add_write "write" "$HOME/.ssh/agent-init.sh"
+  fi
 }
 
 plan_vim_ycm() {
@@ -786,20 +822,79 @@ EOL
       log_warn "Failed to download ~/.ssh/config"
     fi
 
-    mkdir -p "${HOME}/.config/systemd/user"
-    local unit
-    for unit in "ssh-agent.service" "ssh-add.service"; do
-      if wget -q "${RAW_BASE}/systemd/user/${unit}" -O "${HOME}/.config/systemd/user/${unit}"; then
-        log_info "Downloaded ${unit}"
-      else
-        log_warn "Failed to download ${unit}"
-      fi
-    done
+    # Guard: xfce4-session auto-launches its own ssh-agent by default
+    # (unless gnome-keyring-daemon is present) and will otherwise fight
+    # whatever agent we set up below for SSH_AUTH_SOCK on every login.
+    if command -v xfconf-query &>/dev/null && xfconf-query -c xfce4-session -l &>/dev/null; then
+      log_info "Disabling xfce4-session's built-in ssh-agent auto-launch..."
+      xfconf-query -c xfce4-session -p /startup/ssh-agent/enabled -s false 2>/dev/null \
+        || xfconf-query -c xfce4-session -p /startup/ssh-agent/enabled -n -t bool -s false 2>/dev/null \
+        || log_warn "Could not set xfce4-session's ssh-agent property"
+    fi
 
-    systemctl --user daemon-reload
-    systemctl --user enable --now ssh-agent || log_warn "Could not enable ssh-agent.service"
-    systemctl --user enable --now ssh-add   || log_warn "Could not enable ssh-add.service"
-    log_info "SSH agent services enabled and started"
+    if [[ "$(detect_init_system)" == "systemd" ]]; then
+      # Guard: GNOME 46+ moved gnome-keyring's ssh-agent component out into
+      # gcr4's gcr-ssh-agent, shipped as a socket-activated systemd user unit
+      # that claims SSH_AUTH_SOCK the same way our own agent does — the same
+      # race as XFCE's built-in agent above, just via systemd instead of
+      # xfconf. Some Cinnamon/MATE setups pull in gcr4 too, so this isn't
+      # GNOME-only; KDE's ssh-agent (gpg-agent's enable-ssh-support) is
+      # opt-in rather than on by default, so it needs no guard here.
+      if command -v systemctl &>/dev/null && systemctl --user list-unit-files gcr-ssh-agent.socket &>/dev/null; then
+        log_info "Disabling gcr-ssh-agent (GNOME/gcr4's built-in ssh-agent)..."
+        systemctl --user disable --now gcr-ssh-agent.socket gcr-ssh-agent.service 2>/dev/null \
+          || log_warn "Could not disable gcr-ssh-agent"
+      fi
+
+      mkdir -p "${HOME}/.config/systemd/user"
+      if wget -q "${RAW_BASE}/systemd/user/ssh-agent.service" -O "${HOME}/.config/systemd/user/ssh-agent.service"; then
+        log_info "Downloaded ssh-agent.service"
+      else
+        log_warn "Failed to download ssh-agent.service"
+      fi
+
+      systemctl --user daemon-reload
+      systemctl --user enable --now ssh-agent || log_warn "Could not enable ssh-agent.service"
+      log_info "SSH agent service enabled and started (systemd); key loads lazily via ssh/config's AddKeysToAgent"
+    else
+      log_info "No systemd user session detected — installing portable ssh-agent fallback..."
+      if wget -q "${RAW_BASE}/ssh/agent-init.sh" -O "${HOME}/.ssh/agent-init.sh"; then
+        chmod +x "${HOME}/.ssh/agent-init.sh"
+        log_info "Downloaded ~/.ssh/agent-init.sh"
+      else
+        log_warn "Failed to download ~/.ssh/agent-init.sh"
+      fi
+
+      local marker="# ssh_agent module (bootstrap.sh non-systemd fallback)"
+
+      if [[ -f "${HOME}/.bash_profile" ]] && ! grep -qF "$marker" "${HOME}/.bash_profile"; then
+        {
+          echo ""
+          echo "$marker"
+          echo '[ -d /run/systemd/system ] || . "$HOME/.ssh/agent-init.sh"'
+        } >> "${HOME}/.bash_profile"
+        log_info "Wired ssh-agent fallback into ~/.bash_profile"
+      fi
+
+      if [[ -f "${HOME}/.config/fish/config.fish" ]]; then
+        mkdir -p "${HOME}/.config/fish/functions"
+        if wget -q "${RAW_BASE}/fish/functions/ssh_agent_ensure.fish" -O "${HOME}/.config/fish/functions/ssh_agent_ensure.fish"; then
+          log_info "Downloaded ssh_agent_ensure.fish"
+        else
+          log_warn "Failed to download ssh_agent_ensure.fish"
+        fi
+        if ! grep -qF "$marker" "${HOME}/.config/fish/config.fish"; then
+          {
+            echo ""
+            echo "$marker"
+            echo "if not test -d /run/systemd/system; ssh_agent_ensure; end"
+          } >> "${HOME}/.config/fish/config.fish"
+          log_info "Wired ssh-agent fallback into ~/.config/fish/config.fish"
+        fi
+      fi
+
+      log_info "Portable ssh-agent fallback installed (only activates when no systemd user session is present)"
+    fi
   fi
 
   # vim_ycm

@@ -2,10 +2,5 @@ Host github.com
     IdentityFile ~/.ssh/id_ed25519
     AddKeysToAgent yes
 
-Host github-didactic-waddle
-    HostName github.com
-    IdentityFile ~/.ssh/id_ed25519_didactic_waddle
-    AddKeysToAgent yes
-
 Host *
     AddKeysToAgent yes
