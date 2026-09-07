@@ -3,7 +3,7 @@
 # Standalone script for system management - Improved Edition
 
 if [ -z "$1" ]; then
-    echo "Usage: bsys [search|install|upgrade|info|clean] [args]"
+    echo "Usage: bsys [search|install|upgrade|remove|reinstall|info|clean] [args]"
     exit 1
 fi
 
@@ -92,6 +92,49 @@ case "$operation" in
                 sudo zypper update -y &&
                 echo "Zypper upgrade completed" ;;
         esac ;;
+
+    remove)
+        if [ -z "$1" ]; then echo "Usage: bsys remove PACKAGE1 [PACKAGE2...]"; exit 1; fi
+
+        echo "WARNING: This will remove the following packages: $*"
+        echo "Package manager: $pkg_manager"
+        echo "Continue? (y/N)"
+        read -r response
+        [[ ! "$response" =~ ^[Yy]$ ]] && { echo "Removal cancelled"; exit 0; }
+
+        case "$pkg_manager" in
+            apt) sudo apt purge -y --auto-remove "$@" && sudo apt autoremove --purge -y ;;
+            pacman) sudo pacman -Rns --noconfirm "$@" ;;
+            dnf) sudo dnf remove -y "$@" && sudo dnf autoremove -y ;;
+            zypper) sudo zypper remove -y "$@" ;;
+        esac
+
+        if [ $? -eq 0 ]; then
+            echo "Removal completed successfully"
+        else
+            echo "Removal failed"
+            exit 1
+        fi ;;
+
+    reinstall)
+        if [ -z "$1" ]; then echo "Usage: bsys reinstall PACKAGE1 [PACKAGE2...]"; exit 1; fi
+
+        echo "Reinstalling packages: $*"
+        echo "Package manager: $pkg_manager"
+
+        case "$pkg_manager" in
+            apt) sudo apt update && sudo apt reinstall -y "$@" ;;
+            pacman) sudo pacman -S --noconfirm "$@" ;;
+            dnf) sudo dnf reinstall -y "$@" ;;
+            zypper) sudo zypper install -y --force "$@" ;;
+        esac
+
+        if [ $? -eq 0 ]; then
+            echo "Reinstall completed successfully"
+        else
+            echo "Reinstall failed"
+            exit 1
+        fi ;;
 
     info)
         if [ -z "$1" ]; then echo "Usage: bsys info PACKAGE_NAME"; exit 1; fi

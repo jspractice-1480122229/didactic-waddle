@@ -130,7 +130,9 @@ sys() {
         search) case "$pkg_manager" in apt) apt search "$1" ;; pacman) pacman -Ss "$1" ;; dnf) dnf search "$1" ;; zypper) zypper search "$1" ;; *) echo "Unsupported" ;; esac ;;
         install) case "$pkg_manager" in apt) sudo apt update && sudo apt install -y "$@" ;; pacman) sudo pacman -S --noconfirm "$@" ;; dnf) sudo dnf install -y "$@" ;; zypper) sudo zypper install -y "$@" ;; *) echo "Unsupported" ;; esac ;;
         upgrade) case "$pkg_manager" in apt) sudo apt update && sudo apt full-upgrade -y && sudo apt autoremove --purge -y ;; pacman) sudo pacman -Syu --noconfirm ;; dnf) sudo dnf upgrade --refresh -y && sudo dnf autoremove -y ;; zypper) sudo zypper refresh && sudo zypper update -y ;; *) echo "Unsupported" ;; esac ;;
-        *) echo "Usage: sys [search|install|upgrade] [args]" ;;
+        remove) case "$pkg_manager" in apt) sudo apt purge -y --auto-remove "$@" && sudo apt autoremove --purge -y ;; pacman) sudo pacman -Rns --noconfirm "$@" ;; dnf) sudo dnf remove -y "$@" && sudo dnf autoremove -y ;; zypper) sudo zypper remove -y "$@" ;; *) echo "Unsupported" ;; esac ;;
+        reinstall) case "$pkg_manager" in apt) sudo apt update && sudo apt reinstall -y "$@" ;; pacman) sudo pacman -S --noconfirm "$@" ;; dnf) sudo dnf reinstall -y "$@" ;; zypper) sudo zypper install -y --force "$@" ;; *) echo "Unsupported" ;; esac ;;
+        *) echo "Usage: sys [search|install|upgrade|remove|reinstall] [args]" ;;
     esac
 }
 
@@ -262,6 +264,8 @@ smushpdf() { fileops compress "$@"; }
 tellme() { sys search "$@"; }
 gimme() { sys install "$@"; }
 iago() { sys upgrade; }
+nuke() { sys remove "$@"; }
+tryagain() { sys reinstall "$@"; }
 epoch() { utils epoch "$@"; }
 wordlist() { utils words; }
 ponies() { utils pony; }

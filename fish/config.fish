@@ -68,6 +68,11 @@ if test -f ~/.config/fish/secrets.fish
     source ~/.config/fish/secrets.fish
 end
 
+# Load personal/machine-specific overrides (DO NOT COMMIT THIS FILE)
+if test -f ~/.config/fish/config.personal.fish
+    source ~/.config/fish/config.personal.fish
+end
+
 function bt-reset
     echo "Stopping the noise and waking the K850..."
     sudo systemctl restart bluetooth
