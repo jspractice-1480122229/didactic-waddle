@@ -17,8 +17,8 @@ case "$operation" in
             exit 1
         fi
 
-        local case_type="$1"; shift
-        local success=0 skipped=0 failed=0
+        case_type="$1"; shift
+        success=0 skipped=0 failed=0
 
         for f in "$@"; do
             if [ ! -e "$f" ]; then
@@ -27,8 +27,8 @@ case "$operation" in
                 continue
             fi
 
-            local new=""
-            local base="${f%.*}" ext="${f##*.}"
+            new=""
+            base="${f%.*}" ext="${f##*.}"
             [ "$base" = "$f" ] && ext=""  # Handle files with no extension
 
             case "$case_type" in
@@ -84,19 +84,18 @@ case "$operation" in
             exit 1
         fi
 
-        local file="$1" count="$2"
+        file="$1" count="$2"
         if [ ! -f "$file" ]; then echo "Error: File '$file' not found"; exit 1; fi
         if ! [[ "$count" =~ ^[0-9]+$ ]] || [ "$count" -gt 50 ]; then
             echo "Error: Count must be a number between 1-50"
             exit 1
         fi
 
-        local base="${file%.*}" ext="${file##*.}"
+        base="${file%.*}" ext="${file##*.}"
         [ "$base" = "$file" ] && ext=""  # Handle files with no extension
 
         echo "Creating $count copies of '$file'..."
         for ((i=1; i<=count; i++)); do
-            local output
             if [ -n "$ext" ]; then
                 output="${base}_copy${i}.${ext}"
             else
@@ -116,12 +115,12 @@ case "$operation" in
             exit 1
         fi
 
-        local file1="$1" file2="$2"
+        file1="$1" file2="$2"
         if [ ! -f "$file1" ]; then echo "Error: '$file1' not found"; exit 1; fi
         if [ ! -f "$file2" ]; then echo "Error: '$file2' not found"; exit 1; fi
         if [ "$file1" -ef "$file2" ]; then echo "Error: Cannot swap file with itself"; exit 1; fi
 
-        local tmp="/tmp/swap_$$_$(basename "$file1")"
+        tmp="/tmp/swap_$$_$(basename "$file1")"
         echo "Swapping: '$file1' <-> '$file2'"
 
         if mv -- "$file1" "$tmp" && mv -- "$file2" "$file1" && mv -- "$tmp" "$file2"; then
@@ -141,7 +140,7 @@ case "$operation" in
                     echo "Example: bfileops random binary test.bin 1024"
                     exit 1
                 fi
-                local output="$2" size="$3"
+                output="$2" size="$3"
                 if ! [[ "$size" =~ ^[0-9]+$ ]] || [ "$size" -gt 1073741824 ]; then  # 1GB limit
                     echo "Error: Size must be a number, max 1GB (1073741824 bytes)"
                     exit 1
@@ -159,7 +158,7 @@ case "$operation" in
                     echo "Usage: bfileops random text OUTPUT_FILE SIZE_IN_CHARS"
                     exit 1
                 fi
-                local output="$2" size="$3"
+                output="$2" size="$3"
                 if ! [[ "$size" =~ ^[0-9]+$ ]] || [ "$size" -gt 1048576 ]; then  # 1MB text limit
                     echo "Error: Size must be a number, max 1MB (1048576 chars)"
                     exit 1
@@ -182,22 +181,21 @@ case "$operation" in
             exit 1
         fi
 
-        local input="$1"
+        input="$1"
         if [ ! -f "$input" ]; then echo "Error: File '$input' not found"; exit 1; fi
 
         # Create backup first
-        local backup="${input}.backup.$(date +%Y%m%d_%H%M%S)"
+        backup="${input}.backup.$(date +%Y%m%d_%H%M%S)"
         if ! cp "$input" "$backup"; then
             echo "Error: Cannot create backup file"
             exit 1
         fi
 
-        local tmp="/tmp/noempties_$$"
+        tmp="/tmp/noempties_$$"
         echo "Linearizing text file: $input"
         echo "Backup saved as: $backup"
 
         if perl -nlwe 'tr/ //d; print if length' "$input" > "$tmp"; then
-            local orig_lines new_lines
             orig_lines=$(wc -l < "$input")
             new_lines=$(wc -l < "$tmp")
 
@@ -215,13 +213,12 @@ case "$operation" in
             exit 1
         fi
 
-        local input="$1" output="$2"
+        input="$1" output="$2"
         if [ ! -f "$input" ]; then echo "Error: Input file '$input' not found"; exit 1; fi
         if [ "${input##*.}" != "pdf" ]; then echo "Warning: Input doesn't appear to be a PDF file"; fi
 
         echo "Compressing PDF: $input -> $output"
         if gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dNOPAUSE -dBATCH -dQUIET -sOutputFile="$output" "$input"; then
-            local orig_size new_size
             orig_size=$(stat -f%z "$input" 2>/dev/null || stat -c%s "$input" 2>/dev/null)
             new_size=$(stat -f%z "$output" 2>/dev/null || stat -c%s "$output" 2>/dev/null)
             echo "Compression complete: $(($orig_size/1024))KB -> $(($new_size/1024))KB"

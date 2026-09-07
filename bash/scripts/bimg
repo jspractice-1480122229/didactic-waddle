@@ -17,7 +17,7 @@ safer_glob() {
 case "$operation" in
 # ⚡️ RUN-ABLE - Actually usable resize function
 resize)
-    local width="${1:-800}" quality="${2:-60}" format="${3:-webp}" prefix="${4:-resized_}"
+    width="${1:-800}" quality="${2:-60}" format="${3:-webp}" prefix="${4:-resized_}"
 
     # Validate inputs like we're not animals
     if ! [[ "$width" =~ ^[0-9]+$ ]]; then echo "Error: Width must be a number"; exit 1; fi
@@ -25,15 +25,15 @@ resize)
         echo "Error: Quality must be 1-100"; exit 1; fi
 
     safer_glob
-    local files=(*.jpg *.jpeg *.png *.gif *.bmp)
+    files=(*.jpg *.jpeg *.png *.gif *.bmp)
     if [ ${#files[@]} -eq 0 ]; then echo "No image files found in current directory"; exit 1; fi
 
     echo "Found ${#files[@]} image files. Processing..."
-    local count=0
+    count=0
     for f in "${files[@]}"; do
         if [ -f "$f" ]; then
-            local base="${f%.*}"
-            local output="${prefix}${base}.${format}"
+            base="${f%.*}"
+            output="${prefix}${base}.${format}"
             if [ -f "$output" ]; then
                 echo "Skipping $f (output exists: $output)"
                 continue
@@ -50,7 +50,7 @@ resize)
     ;;
     # ⚡️ RUN-ABLE - Universal metadata destruction
 clean)
-    local count=0 total=0
+    count=0 total=0
 
     echo "Scanning for images with potential metadata..."
 
@@ -91,7 +91,7 @@ clean)
                 fi
             elif command -v magick &>/dev/null; then
                 # ImageMagick fallback - strips most metadata
-                local temp="/tmp/clean_$$_${f##*/}"
+                temp="/tmp/clean_$$_${f##*/}"
                 if magick "$f" -strip "$temp" && mv "$temp" "$f"; then
                     ((count++))
                 else
@@ -114,9 +114,9 @@ favicon)
     if [ -z "$1" ]; then echo "Usage: bimg favicon INPUT [OUTPUT]"; exit 1; fi
     if [ ! -f "$1" ]; then echo "Error: Input file '$1' not found"; exit 1; fi
 
-    local input="$1"
-    local output="${2:-favicon.ico}"
-    local temp_dir="/tmp/favicon_$$"
+    input="$1"
+    output="${2:-favicon.ico}"
+    temp_dir="/tmp/favicon_$$"
 
     # Create temp directory for multi-resolution madness
     mkdir -p "$temp_dir" || { echo "Error: Cannot create temp directory"; exit 1; }

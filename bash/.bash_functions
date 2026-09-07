@@ -76,9 +76,9 @@ img() {
             safer_glob
             for f in *.jpg *.jpeg *.png *.gif *.bmp; do
                 local base="${f%.*}"; local ext="${f##*.}"
-                magick "$f" -resize "${width}x>" -quality "$quality" "/tmp/tmp_$.$ext"
-                cwebp -q "$quality" -m 6 -mt "/tmp/tmp_$.$ext" -o "resized_${base}.webp"
-                rm "/tmp/tmp_$.$ext"
+                magick "$f" -resize "${width}x>" -quality "$quality" "/tmp/tmp_$$.$ext"
+                cwebp -q "$quality" -m 6 -mt "/tmp/tmp_$$.$ext" -o "resized_${base}.webp"
+                rm "/tmp/tmp_$$.$ext"
             done ;;
         clean) for f in *.jpg; do [ -f "$f" ] && jpegoptim -pqt --strip-all "$f"; done ;;
         thumb)
@@ -258,7 +258,7 @@ lowercase() { fileops lowercase "$@"; }
 dupe() { fileops duplicate "$@"; }
 swap() { fileops swap "$@"; }
 dummyfile() { fileops random "$1" "$2"; }
-plugdummy() { fileops random "$2" "$1"; }
+plugdummy() { fileops random "$2" "$1"; }  # args intentionally swapped vs dummyfile, matches fish plugdummy.fish
 noblanks() { fileops clean "$@"; }
 smushpdf() { fileops compress "$@"; }
 tellme() { sys search "$@"; }
@@ -280,7 +280,6 @@ fstr() { finder content "$@"; }
 pfimpf() { archive extract "$@"; }
 scramble() { archive encrypt "$@"; }
 descramble() { archive decrypt "$@"; }
-wz() { echo "install_warzone2100 is defined but should be run manually if needed."; }
 
 #=============================================================
 # HELP FUNCTION

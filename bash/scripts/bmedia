@@ -24,7 +24,7 @@ case "$operation" in
     # ⚡️ RUN-ABLE - Safer batch processing
     compress)
         output_dir="${2:-compressed}"; mkdir -p "$output_dir"
-        local count=0
+        count=0
         for f in *.mp3; do
             if [ -f "$f" ]; then ((count++)); fi
         done
