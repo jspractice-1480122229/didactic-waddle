@@ -125,9 +125,13 @@ function sysmgmt -d "Comprehensive system management"
                     sudo apt autoremove --purge -y && sudo apt clean
                 case pacman
                     # Handle AUR packages if helpers are installed
+                    echo ">>>>>>>>>>> AUR <<<<<<<<<<<<"
                     echo "=> Upgrading AUR packages..."
+                    echo ">>>>>>>>>>>==*==<<<<<<<<<<<<"
                     if command -v paru >/dev/null 2>&1
-                        echo "==> Upgrading with paru..."
+                        echo "..........................."
+                        echo "==> Upgrading with paru <=="
+                        echo "..........................."
                         paru -Syu --noconfirm
                         rd ~/.cache/paru/clone
                     else if command -v yay >/dev/null 2>&1
@@ -136,16 +140,21 @@ function sysmgmt -d "Comprehensive system management"
                     else
                         echo "==> No AUR helper found (paru/yay)"
                     end
-                    echo "===> Updating repos..."
+                    echo "*** *** **** *** ***"
+                    echo "*** pacman stage ***"
+                    echo "*** *** **** *** ***"
+                    echo "=> Updating repos..."
                     sudo pacman -Syy
-                    echo "====> Removing orphans..."
+                    echo "==> Removing orphans..."
                     set -l orphans (pacman -Qtdq 2>/dev/null)
                     if test -n "$orphans"
                         sudo pacman -Rns --noconfirm $orphans
                     end
-                    echo "=====> Performing upgrade..."
+                    echo "===> Performing upgrade..."
                     sudo pacman -Syu --noconfirm
-                    echo "======> Cleaning up..."
+                    echo "<.....................>"
+                    echo "<...> Cleaning up <...>"
+                    echo "<.....................>"
                     sudo pacman -Scc --noconfirm
                 case dnf dnf5
                     echo "=> Checking updates..."
