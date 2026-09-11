@@ -301,6 +301,14 @@ print_plan() {
 # ------------------------
 # Argument parsing
 # ------------------------
+add_selected_modules() {
+  local part
+  IFS=',' read -ra _mod_parts <<< "$1"
+  for part in "${_mod_parts[@]}"; do
+    [[ -n "$part" ]] && SELECTED_MODULES+=("$part")
+  done
+}
+
 parse_args() {
   while (($#)); do
     case "$1" in
@@ -313,10 +321,10 @@ parse_args() {
           LIST_MODULES=1
         else
           shift
-          SELECTED_MODULES+=("$1")
+          add_selected_modules "$1"
         fi
         ;;
-      --mod=*) SELECTED_MODULES+=("${1#*=}") ;;
+      --mod=*) add_selected_modules "${1#*=}" ;;
       --shell)
         if [[ -z "${2:-}" || "${2:-}" == --* ]]; then
           log_error "--shell requires an argument: bash, fish, or both"
@@ -329,13 +337,16 @@ parse_args() {
       --help|-h)
         cat <<'EOF'
 Usage:
-  ./bootstrap.sh [--dry-run] [--list-modules] [--help-module <name>] [--mod <name> ...] [--shell bash|fish|both]
+  ./bootstrap.sh [--dry-run] [--list-modules] [--help-module <name>] [--mod <name>[,<name>...] ...] [--shell bash|fish|both]
+
+--mod accepts a comma-separated list and/or may be repeated; both forms combine.
 
 Examples:
   ./bootstrap.sh --list-modules
   ./bootstrap.sh --help-module ssh_agent
   ./bootstrap.sh --dry-run --mod base_core --mod media_cli
   ./bootstrap.sh --mod base_core --mod ssh_agent --mod vim_ycm --mod dotfiles_fish
+  ./bootstrap.sh --mod base_core,ssh_agent,vim_ycm,dotfiles_fish
   ./bootstrap.sh --shell both --mod base_core
   ./bootstrap.sh --shell bash
 EOF
