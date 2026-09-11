@@ -129,9 +129,9 @@ function sysmgmt -d "Comprehensive system management"
                     echo "=> Upgrading AUR packages..."
                     echo ">>>>>>>>>>>==*==<<<<<<<<<<<<"
                     if command -v paru >/dev/null 2>&1
-                        echo "..........................."
-                        echo "==> Upgrading with paru <=="
-                        echo "..........................."
+                        echo "   ..........................."
+                        echo "   ==> Upgrading with paru <=="
+                        echo "   ..........................."
                         paru -Syu --noconfirm
                         rd ~/.cache/paru/clone
                     else if command -v yay >/dev/null 2>&1
@@ -140,12 +140,12 @@ function sysmgmt -d "Comprehensive system management"
                     else
                         echo "==> No AUR helper found (paru/yay)"
                     end
-                    echo "*** *** **** *** ***"
-                    echo "*** pacman stage ***"
-                    echo "*** *** **** *** ***"
-                    echo "=> Updating repos..."
+                    echo "  *** *** **** *** ***"
+                    echo "  *** pacman stage ***"
+                    echo "  *** *** **** *** ***"
+                    echo "=-> Updating repos..."
                     sudo pacman -Syy
-                    echo "==> Removing orphans..."
+                    echo " Removing orphans... =->"
                     set -l orphans (pacman -Qtdq 2>/dev/null)
                     if test -n "$orphans"
                         sudo pacman -Rns --noconfirm $orphans
