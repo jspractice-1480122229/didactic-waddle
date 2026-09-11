@@ -1,9 +1,11 @@
 # TODO
 
-All 2026-09-07 change-sets below are now committed and pushed to
-`origin/trunk` (five commits: `--shell` bash/fish parity, bash bug fixes,
-fish/functions symlink migration, mybootstrap_cross_distro.sh removal, and
-the ssh_agent rebuild). What's left is live-deployment follow-through.
+All 2026-09-07 change-sets below are committed and pushed to `origin/trunk`
+(six commits: `--shell` bash/fish parity, bash bug fixes, fish/functions
+symlink migration, mybootstrap_cross_distro.sh removal, the ssh_agent
+rebuild, and a TODO.md doc-only follow-up). The 2026-09-08 `--mod`
+comma-list change below is still uncommitted. What's left otherwise is
+live-deployment follow-through plus the new VM test lab.
 
 ## Live deployment
 
@@ -13,6 +15,61 @@ the ssh_agent rebuild). What's left is live-deployment follow-through.
       Run it (ideally `--dry-run` first) when ready to deploy.
 - [ ] Once satisfied the `fish/functions` → repo symlink is working, delete
       the old live backup at `~/.config/fish/functions.bak_20260907_125015`.
+
+## Uncommitted (2026-09-08)
+
+- [ ] `--mod` now accepts a comma-separated list (`--mod a,b,c`) in addition
+      to the existing repeatable-flag form (`--mod a --mod b`) — both combine
+      and dedupe. Implemented via a new `add_selected_modules()` helper in
+      `parse_args()`. Verified with `bash -n` and dry-run tests. Not yet
+      committed — `git diff bootstrap.sh` has the change sitting in the
+      working tree.
+
+## VM test lab (libvirt/virt-manager)
+
+Set up 2026-09-08 to give `bootstrap.sh` real per-distro test targets instead
+of only ever running against this one CachyOS/pacman machine.
+
+- Two libvirt storage pools under `qemu:///system` (the connection
+  virt-manager's default "QEMU/KVM" view uses):
+  `isos` → `~/Downloads/isos` (existing ISO library), `vmdisks` → `~/VMs`
+  (VM disk images).
+- Five VMs, 4GB RAM / 2 vCPU / 20GB qcow2 disk each, one per package-manager
+  branch in `detect_pkg_manager()`, all using QEMU user-mode networking
+  (`--network user`, not the libvirt-managed default NAT network — see known
+  issue below) so they still get outbound internet during install:
+  - `bootstrap-arch` — Arch Linux (pacman)
+  - `bootstrap-debian13` — Debian 13 (apt, systemd)
+  - `bootstrap-antix` — antiX 23.1 (apt, **no systemd** — this is the
+    "actual antiX box" the ssh_agent section below has been waiting on)
+  - `bootstrap-fedora44` — Fedora Server 44 (dnf5)
+  - `bootstrap-opensuse16` — openSUSE Leap 16.0 (zypper)
+- [ ] **None of the 5 VMs have an OS installed yet** — they're only sitting
+      at their installer boot screens (no autoinstall/kickstart/preseed was
+      configured). Walk each through its interactive install via
+      virt-manager, then use them to actually run `bootstrap.sh` per distro.
+- [ ] Once `bootstrap-antix` is installed, run `--mod ssh_agent` on it for
+      real — this is the concrete way to close the "actual antiX box
+      untested" item in the ssh_agent section below.
+- [ ] **Known host bug, unfixed:** `qemu:///system`'s default NAT network
+      can't start — `virsh net-start default` fails with
+      `error creating bridge interface virbr0: Operation not permitted`,
+      even though `libvirtd` runs as root with a full capability set and a
+      plain `sudo ip link add virbr0 type bridge` succeeds outside libvirtd.
+      Restarting `libvirtd` didn't fix it; root cause not found (not
+      AppArmor/SELinux/capability-bounding-set as far as could be checked
+      in-session — see git blame/session history around 2026-09-08 for the
+      full debugging trail). Worked around via QEMU user-mode networking for
+      these 5 VMs, which needs no bridge. Only matters if/when NAT-bridged
+      networking (inter-VM comms, port forwarding, DHCP-visible VMs) is
+      actually needed — reported as Claude Code feedback but the libvirt bug
+      itself is still open on this host.
+- Gotcha for any future `virsh`/`virt-install` work on this host: the
+  default connection resolved to `qemu:///session` (unprivileged, per-user
+  driver) rather than `qemu:///system` (what virt-manager shows by
+  default) when no `--connect`/`-c` was given. Always pass
+  `-c qemu:///system` explicitly, or the VMs/pools land somewhere virt-manager
+  won't show them.
 
 ## Known bash bugs (fixed 2026-09-07, commit a901aee)
 
@@ -137,4 +194,6 @@ isn't present) that spawns `ssh-agent -s` and reparents it to init.
       text). Live system cleaned up to match: unit file, its
       `default.target.wants` symlink, and its failed unit state all removed;
       `ssh-agent.service` alone remains enabled and running.
-- [ ] Still untested: an actual antiX (or other non-systemd) box.
+- [ ] Still untested: an actual antiX (or other non-systemd) box — see the
+      `bootstrap-antix` VM in the "VM test lab" section above, built
+      2026-09-08 specifically for this.
