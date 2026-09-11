@@ -1,5 +1,5 @@
-function bestytclip -d "Download best video from YouTube (wrapper for ytdl)"
-    ytdl video $argv
+function bestytclip -d "Download best video from YouTube (wrapper for dlyt)"
+    dlyt video $argv
 end
 # 3digit.fish
 function 3digit -d "Generate 3-digit random number (wrapper for randumb)"

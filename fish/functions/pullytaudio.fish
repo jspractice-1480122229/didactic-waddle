@@ -1,3 +1,3 @@
-function pullytaudio -d "Pull audio from YouTube (wrapper for ytdl)"
-    ytdl audio $argv
+function pullytaudio -d "Pull audio from YouTube (wrapper for dlyt)"
+    dlyt audio $argv
 end

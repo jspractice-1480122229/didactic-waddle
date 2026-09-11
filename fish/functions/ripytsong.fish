@@ -1,3 +1,3 @@
-function ripytsong -d "Rip audio from YouTube (wrapper for ytdl)"
-    ytdl rip $argv
+function ripytsong -d "Rip audio from YouTube (wrapper for dlyt)"
+    dlyt rip $argv
 end
