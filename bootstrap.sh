@@ -177,10 +177,9 @@ module_desc() {
     editor_codium)          echo "VSCodium (repo on apt/dnf; AUR on Arch)" ;;
     browser_edge)           echo "Microsoft Edge (repo on apt/dnf; AUR on Arch)" ;;
     scripts_bin)            echo "Download your ~/.local/bin helper scripts" ;;
-    dotfiles_bashrc)        echo "Backup and download the repo's full bash/ config (bashrc, aliases, functions, personal overlays)" ;;
-    dotfiles_fish)          echo "Generate fish config.fish + aliases + download fish functions" ;;
+    dotfiles_bashrc)        echo "Backup and download the repo's full bash/ config (bashrc, aliases, functions, personal overlays); includes install_vim/ycm (cross-distro-vim-ycm.sh)" ;;
+    dotfiles_fish)          echo "Generate fish config.fish + aliases + download fish functions; includes install_vim/ycm (cross-distro-vim-ycm.sh)" ;;
     ssh_agent)              echo "Download SSH config + persistent ssh-agent (systemd units, or a portable fallback on non-systemd inits); guards against xfce4-session's and GNOME/gcr4's competing agents" ;;
-    vim_ycm)                echo "Download cross-distro-vim-ycm.sh to ~/binnie/ + install_vim/ycm fish functions" ;;
     rust)                   echo "Install rustup toolchain (cargo available)" ;;
     rust_tools)             echo "Modern CLI tools via pkgs else cargo (skips cargo if binary exists)" ;;
     *)                      echo "Unknown module" ;;
@@ -192,7 +191,7 @@ print_modules() {
     base_core media_cli media_lounge_players media_lounge_streaming
     containers_podman dev_python_uv dev_python_pyenv dev_jdk dev_go
     editor_codium browser_edge scripts_bin dotfiles_bashrc dotfiles_fish
-    ssh_agent vim_ycm rust rust_tools
+    ssh_agent rust rust_tools
   )
   printf "Available modules:\n"
   local m
@@ -217,13 +216,16 @@ print_module_help() {
       printf "    and ~/.bash_personal, then downloads the repo's versions of each.\n"
       printf "  - The repo's bash config mirrors the fish config's dispatcher-function\n"
       printf "    pattern (media/img/fileops/sys/utils/finder/archive) for feature parity.\n"
+      printf "  - Also downloads cross-distro-vim-ycm.sh to ~/binnie/ (used by the\n"
+      printf "    downloaded .bash_functions' install_vim/install_ycm wrappers).\n"
       printf "  - This is intentionally opt-in.\n"
       ;;
     dotfiles_fish)
       printf "Notes:\n"
       printf "  - Writes ~/.config/fish/config.fish and conf.d/aliases.fish.\n"
       printf "  - Sets SSH_AUTH_SOCK to systemd socket path.\n"
-      printf "  - Downloads install_vim.fish and install_ycm.fish into functions/.\n"
+      printf "  - Downloads install_vim.fish and install_ycm.fish into functions/,\n"
+      printf "    plus cross-distro-vim-ycm.sh to ~/binnie/ (which those functions use).\n"
       ;;
     ssh_agent)
       printf "Notes:\n"
@@ -248,12 +250,6 @@ print_module_help() {
       printf "    dotfiles are deployed). It reuses any already-reachable agent\n"
       printf "    (e.g. one a desktop session already started) or starts one and\n"
       printf "    caches its env for reuse across shells.\n"
-      ;;
-    vim_ycm)
-      printf "Notes:\n"
-      printf "  - Downloads cross-distro-vim-ycm.sh to ~/binnie/.\n"
-      printf "  - Downloads install_vim.fish and install_ycm.fish to fish functions dir.\n"
-      printf "  - Run 'install_vim' then 'install_ycm' in fish to compile Vim+YCM.\n"
       ;;
     rust_tools)
       printf "Notes:\n"
@@ -345,8 +341,8 @@ Examples:
   ./bootstrap.sh --list-modules
   ./bootstrap.sh --help-module ssh_agent
   ./bootstrap.sh --dry-run --mod base_core --mod media_cli
-  ./bootstrap.sh --mod base_core --mod ssh_agent --mod vim_ycm --mod dotfiles_fish
-  ./bootstrap.sh --mod base_core,ssh_agent,vim_ycm,dotfiles_fish
+  ./bootstrap.sh --mod base_core --mod ssh_agent --mod dotfiles_fish
+  ./bootstrap.sh --mod base_core,ssh_agent,dotfiles_fish
   ./bootstrap.sh --shell both --mod base_core
   ./bootstrap.sh --shell bash
 EOF
@@ -436,6 +432,9 @@ plan_dotfiles_bashrc() {
   add_write "backup_download" "$HOME/.bash_aliases_personal"
   add_write "backup_download" "$HOME/.bash_functions_personal"
   add_write "backup_download" "$HOME/.bash_personal"
+  add_action "Download cross-distro-vim-ycm.sh to ~/binnie/ (used by .bash_functions' install_vim/install_ycm)"
+  add_write "mkdir" "$HOME/binnie"
+  add_write "write" "$HOME/binnie/cross-distro-vim-ycm.sh"
 }
 
 plan_dotfiles_fish() {
@@ -444,6 +443,9 @@ plan_dotfiles_fish() {
   add_write "write" "$HOME/.config/fish/conf.d/aliases.fish"
   add_write "write" "$HOME/.config/fish/functions/install_vim.fish"
   add_write "write" "$HOME/.config/fish/functions/install_ycm.fish"
+  add_action "Download cross-distro-vim-ycm.sh to ~/binnie/ (used by install_vim.fish/install_ycm.fish)"
+  add_write "mkdir" "$HOME/binnie"
+  add_write "write" "$HOME/binnie/cross-distro-vim-ycm.sh"
 }
 
 plan_ssh_agent() {
@@ -463,13 +465,6 @@ plan_ssh_agent() {
     add_action "NOTE: no systemd user session detected — using the portable ssh-agent fallback (cached agent env reused across shells) instead of systemd units"
     add_write "write" "$HOME/.ssh/agent-init.sh"
   fi
-}
-
-plan_vim_ycm() {
-  add_action "Download cross-distro-vim-ycm.sh to ~/binnie/"
-  add_action "Download install_vim.fish and install_ycm.fish"
-  add_write "mkdir" "$HOME/binnie"
-  add_write "write" "$HOME/binnie/cross-distro-vim-ycm.sh"
 }
 
 plan_rust() {
@@ -535,7 +530,6 @@ build_plan() {
       dotfiles_bashrc)        plan_dotfiles_bashrc ;;
       dotfiles_fish)          plan_dotfiles_fish ;;
       ssh_agent)              plan_ssh_agent ;;
-      vim_ycm)                plan_vim_ycm ;;
       rust)                   plan_rust ;;
       rust_tools)             plan_rust_tools ;;
       *)
@@ -769,6 +763,17 @@ execute_plan() {
         log_warn "Failed to download $(basename "$bash_file")"
       fi
     done
+
+    if [[ ! -f "${HOME}/binnie/cross-distro-vim-ycm.sh" ]]; then
+      log_info "Downloading cross-distro-vim-ycm.sh to ~/binnie/..."
+      mkdir -p "${HOME}/binnie"
+      if wget -q "${RAW_BASE}/bash/cross-distro-vim-ycm.sh" -O "${HOME}/binnie/cross-distro-vim-ycm.sh"; then
+        chmod +x "${HOME}/binnie/cross-distro-vim-ycm.sh"
+        log_info "Downloaded cross-distro-vim-ycm.sh"
+      else
+        log_warn "Failed to download cross-distro-vim-ycm.sh"
+      fi
+    fi
   fi
 
   # dotfiles_fish
@@ -814,6 +819,17 @@ EOL
         log_warn "Failed to download ${fn}"
       fi
     done
+
+    if [[ ! -f "${HOME}/binnie/cross-distro-vim-ycm.sh" ]]; then
+      log_info "Downloading cross-distro-vim-ycm.sh to ~/binnie/..."
+      mkdir -p "${HOME}/binnie"
+      if wget -q "${RAW_BASE}/bash/cross-distro-vim-ycm.sh" -O "${HOME}/binnie/cross-distro-vim-ycm.sh"; then
+        chmod +x "${HOME}/binnie/cross-distro-vim-ycm.sh"
+        log_info "Downloaded cross-distro-vim-ycm.sh"
+      else
+        log_warn "Failed to download cross-distro-vim-ycm.sh"
+      fi
+    fi
   fi
 
   # ssh_agent
@@ -906,29 +922,6 @@ EOL
 
       log_info "Portable ssh-agent fallback installed (only activates when no systemd user session is present)"
     fi
-  fi
-
-  # vim_ycm
-  if [[ " ${SELECTED_MODULES[*]} " == *" vim_ycm "* ]]; then
-    log_info "Downloading cross-distro-vim-ycm.sh to ~/binnie/..."
-    mkdir -p "${HOME}/binnie"
-    if wget -q "${RAW_BASE}/bash/cross-distro-vim-ycm.sh" -O "${HOME}/binnie/cross-distro-vim-ycm.sh"; then
-      chmod +x "${HOME}/binnie/cross-distro-vim-ycm.sh"
-      log_info "Downloaded cross-distro-vim-ycm.sh"
-    else
-      log_warn "Failed to download cross-distro-vim-ycm.sh"
-    fi
-
-    local fish_dir="${HOME}/.config/fish"
-    mkdir -p "$fish_dir/functions"
-    local fn
-    for fn in "install_vim.fish" "install_ycm.fish"; do
-      if wget -q "${RAW_BASE}/fish/functions/${fn}" -O "$fish_dir/functions/${fn}"; then
-        log_info "Downloaded ${fn}"
-      else
-        log_warn "Failed to download ${fn}"
-      fi
-    done
   fi
 
   # rust / rust_tools
