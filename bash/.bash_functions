@@ -191,51 +191,10 @@ archive() {
 # VIM/YCM INSTALLATION FUNCTIONS (System Compilation Test)
 #=============================================================
 install_vim() {
-    echo "Installing Vim from source (cross-distro)..."
-    local pkg_manager; local install_cmd; local dependencies
-    if command -v apt &>/dev/null; then
-        pkg_manager="apt"; install_cmd="sudo apt install -y"
-        dependencies=("libncurses5-dev" "libgtk2.0-dev" "libatk1.0-dev" "python3-dev" "git" "build-essential" "cmake")
-    elif command -v dnf &>/dev/null; then
-        pkg_manager="dnf"; install_cmd="sudo dnf install -y"
-        dependencies=("ncurses-devel" "gtk2-devel" "atk-devel" "python3-devel" "git" "gcc-c++" "make" "cmake")
-    elif command -v pacman &>/dev/null; then
-        pkg_manager="pacman"; install_cmd="sudo pacman -S --noconfirm --needed"
-        dependencies=("ncurses" "gtk2" "atk" "python" "git" "base-devel" "cmake")
-    else echo "Unsupported package manager." && return 1; fi
-
-    echo "Installing build dependencies using $pkg_manager..."
-    $install_cmd "${dependencies[@]}"
-
-    local vim_src="$HOME/src/vim"
-    [ ! -d "$vim_src" ] && git clone https://github.com/vim/vim.git "$vim_src"
-    cd "$vim_src" || return 1
-    git pull --rebase && make distclean
-    ./configure --with-features=huge --enable-python3interp=yes --prefix=/usr/local
-    make && sudo make install
-    echo "Vim installation completed."
+    bash -c 'source "$HOME/binnie/cross-distro-vim-ycm.sh" && install_vim'
 }
 install_ycm() {
-    echo "Installing YouCompleteMe dependencies (cross-distro)..."
-    local pkg_manager; local install_cmd; local dependencies
-    if command -v apt &>/dev/null; then
-        pkg_manager="apt"; install_cmd="sudo apt install -y"
-        dependencies=("mono-complete" "openjdk-17-jdk" "shellcheck" "golang" "nodejs" "npm")
-    elif command -v dnf &>/dev/null; then
-        pkg_manager="dnf"; install_cmd="sudo dnf install -y"
-        dependencies=("mono-core" "java-17-openjdk-devel" "ShellCheck" "golang" "nodejs" "npm")
-    elif command -v pacman &>/dev/null; then
-        pkg_manager="pacman"; install_cmd="sudo pacman -S --noconfirm --needed"
-        dependencies=("mono" "jdk17-openjdk" "shellcheck" "go" "nodejs" "npm")
-    else echo "Unsupported package manager." && return 1; fi
-
-    echo "Installing YCM dependencies using $pkg_manager..."
-    $install_cmd "${dependencies[@]}"
-
-    echo "Running YCM installation..."
-    vim +PluginInstall +qall
-    python3 "$HOME/.vim/bundle/YouCompleteMe/install.py" --all
-    echo "YouCompleteMe setup completed."
+    bash -c 'source "$HOME/binnie/cross-distro-vim-ycm.sh" && install_ycm'
 }
 
 #=============================================================
