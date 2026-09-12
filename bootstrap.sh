@@ -928,7 +928,7 @@ EOL
   if [[ " ${SELECTED_MODULES[*]} " == *" rust "* || " ${SELECTED_MODULES[*]} " == *" rust_tools "* ]]; then
     if ! command -v cargo &>/dev/null; then
       log_info "Installing Rust via rustup..."
-      curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+      curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path
       # shellcheck disable=SC1090
       source "$HOME/.cargo/env"
     fi

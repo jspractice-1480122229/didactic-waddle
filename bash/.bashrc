@@ -53,6 +53,13 @@ if [[ ":$PATH:" != *":/usr/sbin:"* ]]; then
   export PATH="$PATH:/usr/sbin"
 fi
 
+# Must run before ALIAS & FUNCTION SOURCING below: .bash_aliases probes
+# `command -v eza` (installed to ~/.cargo/bin) to decide which ls aliases
+# to set, so ~/.cargo/bin has to be on PATH before that sourcing happens.
+if [ -f "$HOME/.cargo/env" ]; then
+    . "$HOME/.cargo/env"
+fi
+
 # =============================================================
 # PROMPT CONFIGURATION (PS1)
 # =============================================================
