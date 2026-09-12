@@ -944,7 +944,8 @@ EOL
         log_info "Skipping cargo install for ${crate} (binary '${bin}' already exists)"
       else
         log_info "cargo install ${crate} (expects binary '${bin}')"
-        cargo install --locked "$crate"
+        cargo install --locked "$crate" \
+          || log_warn "cargo install --locked failed for ${crate} (crate may lack a Cargo.lock) — skipping"
       fi
     done
   fi
