@@ -4,8 +4,12 @@ All 2026-09-07 change-sets below are committed and pushed to `origin/trunk`
 (six commits: `--shell` bash/fish parity, bash bug fixes, fish/functions
 symlink migration, mybootstrap_cross_distro.sh removal, the ssh_agent
 rebuild, and a TODO.md doc-only follow-up). The 2026-09-08 `--mod`
-comma-list change below is still uncommitted. What's left otherwise is
-live-deployment follow-through plus the new VM test lab.
+comma-list change is committed too (2026-09-11, `59ae321`). What's left
+otherwise is live-deployment follow-through plus the VM test lab.
+
+Local-only working notes (currently: a real name/email exposure finding in
+this repo's public git history — not appropriate to write into this
+tracked file) live in the gitignored `TODO.local.md` alongside this file.
 
 ## Live deployment
 
@@ -16,14 +20,12 @@ live-deployment follow-through plus the new VM test lab.
 - [ ] Once satisfied the `fish/functions` → repo symlink is working, delete
       the old live backup at `~/.config/fish/functions.bak_20260907_125015`.
 
-## Uncommitted (2026-09-08)
+## `--mod` comma-list support (added 2026-09-08, committed 2026-09-11, `59ae321`)
 
-- [ ] `--mod` now accepts a comma-separated list (`--mod a,b,c`) in addition
+- [x] `--mod` now accepts a comma-separated list (`--mod a,b,c`) in addition
       to the existing repeatable-flag form (`--mod a --mod b`) — both combine
       and dedupe. Implemented via a new `add_selected_modules()` helper in
-      `parse_args()`. Verified with `bash -n` and dry-run tests. Not yet
-      committed — `git diff bootstrap.sh` has the change sitting in the
-      working tree.
+      `parse_args()`. Verified with `bash -n` and dry-run tests.
 
 ## VM test lab (libvirt/virt-manager)
 
@@ -44,13 +46,21 @@ of only ever running against this one CachyOS/pacman machine.
     "actual antiX box" the ssh_agent section below has been waiting on)
   - `bootstrap-fedora44` — Fedora Server 44 (dnf5)
   - `bootstrap-opensuse16` — openSUSE Leap 16.0 (zypper)
-- [ ] **None of the 5 VMs have an OS installed yet** — they're only sitting
-      at their installer boot screens (no autoinstall/kickstart/preseed was
-      configured). Walk each through its interactive install via
+- [ ] **VM install status (as of 2026-09-11):** `bootstrap-antix` is now
+      installed and in active real use — confirmed when a separate Claude
+      Code session running inside that VM pushed a real commit (`39752ba`,
+      bash `.bash_functions`/`bootstrap.sh` cleanup) straight to
+      `origin/trunk` while this session was mid-conversation on `mumbles`.
+      `bootstrap-opensuse16` has openSUSE Leap 16.0 installed but no desktop
+      environment was selected during install; installing XFCE now
+      (`sudo zypper install -t pattern xfce spice-vdagent`) to fix that.
+      `bootstrap-arch`, `bootstrap-debian13`, `bootstrap-fedora44` — install
+      status unconfirmed, likely still at their installer boot screens.
+      Walk each remaining VM through its interactive install via
       virt-manager, then use them to actually run `bootstrap.sh` per distro.
-- [ ] Once `bootstrap-antix` is installed, run `--mod ssh_agent` on it for
-      real — this is the concrete way to close the "actual antiX box
-      untested" item in the ssh_agent section below.
+- [ ] `bootstrap-antix` is installed and in use, but `--mod ssh_agent` has
+      not been confirmed run on it yet — still the concrete way to close the
+      "actual antiX box untested" item in the ssh_agent section below.
 - [ ] **Known host bug, unfixed:** `qemu:///system`'s default NAT network
       can't start — `virsh net-start default` fails with
       `error creating bridge interface virbr0: Operation not permitted`,
