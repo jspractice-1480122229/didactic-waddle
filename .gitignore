@@ -447,3 +447,6 @@ dw_php_codehinting.config
 #miscellaneous
 .well-known/
 bash/.git-credentials
+
+# local-only notes, never pushed (may contain sensitive scratch content)
+TODO.local.md
