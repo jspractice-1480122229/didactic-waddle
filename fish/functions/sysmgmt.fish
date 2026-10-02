@@ -31,6 +31,51 @@ function sysmgmt -d "Comprehensive system management"
         return 1
     end
 
+    # Per-manager command fragments for search/install/reinstall/remove/info.
+    # Build once here instead of re-switching inside every operation below.
+    set -l pm_sync
+    set -l pm_search
+    set -l pm_install
+    set -l pm_reinstall
+    set -l pm_remove
+    set -l pm_autoremove
+    set -l pm_clean
+    set -l pm_info
+
+    switch $pkg_manager
+        case apt
+            set pm_sync       sudo apt update
+            set pm_search     apt search
+            set pm_install    sudo apt install -y
+            set pm_reinstall  sudo apt reinstall -y
+            set pm_remove     sudo apt purge -y --auto-remove
+            set pm_autoremove sudo apt autoremove --purge -y
+            set pm_clean      sudo apt clean
+            set pm_info       apt show
+        case pacman
+            set pm_search     pacman -Ss
+            set pm_install    sudo pacman -S --noconfirm
+            set pm_reinstall  sudo pacman -S --noconfirm
+            set pm_remove     sudo pacman -Rns --noconfirm
+            set pm_clean      sudo pacman -Scc --noconfirm
+            set pm_info       pacman -Si
+        case dnf dnf5
+            set pm_search     $pkg_manager search
+            set pm_install    sudo $pkg_manager install -y
+            set pm_reinstall  sudo $pkg_manager reinstall -y
+            set pm_remove     sudo $pkg_manager remove -y
+            set pm_autoremove sudo $pkg_manager autoremove -y
+            set pm_clean      sudo $pkg_manager clean all
+            set pm_info       $pkg_manager info
+        case zypper
+            set pm_search     zypper search
+            set pm_install    sudo zypper install -y
+            set pm_reinstall  sudo zypper install -y --force
+            set pm_remove     sudo zypper remove -y
+            set pm_clean      sudo zypper clean --all
+            set pm_info       zypper info
+    end
+
     set -l operation $argv[1]
 
     switch $operation
@@ -46,16 +91,7 @@ function sysmgmt -d "Comprehensive system management"
             end
             
             echo "Searching for '$argv[2]' using $pkg_manager..."
-            switch $pkg_manager
-                case apt
-                    apt search $argv[2]
-                case pacman
-                    pacman -Ss $argv[2]
-                case dnf dnf5
-                    $pkg_manager search $argv[2]
-                case zypper
-                    zypper search $argv[2]
-            end
+            $pm_search $argv[2]
 
         case install gimme
             if test (count $argv) -lt 2
@@ -64,16 +100,10 @@ function sysmgmt -d "Comprehensive system management"
             end
             
             echo "Installing packages with $pkg_manager: $argv[2..-1]"
-            switch $pkg_manager
-                case apt
-                    sudo apt update && sudo apt install -y $argv[2..-1] && sudo apt clean
-                case pacman
-                    sudo pacman -S --noconfirm $argv[2..-1] && sudo pacman -Scc --noconfirm
-                case dnf dnf5
-                    sudo $pkg_manager install -y $argv[2..-1] && sudo $pkg_manager clean all
-                case zypper
-                    sudo zypper install -y $argv[2..-1] && sudo zypper clean --all
+            if test -n "$pm_sync"
+                $pm_sync
             end
+            $pm_install $argv[2..-1] && $pm_clean
 
         case reinstall tryagain
             if test (count $argv) -lt 2
@@ -82,16 +112,10 @@ function sysmgmt -d "Comprehensive system management"
             end
             
             echo "Reinstalling packages with $pkg_manager: $argv[2..-1]"
-            switch $pkg_manager
-                case apt
-                    sudo apt update && sudo apt reinstall -y $argv[2..-1] && sudo apt clean
-                case pacman
-                    sudo pacman -S --noconfirm $argv[2..-1] && sudo pacman -Scc --noconfirm
-                case dnf dnf5
-                    sudo $pkg_manager reinstall -y $argv[2..-1] && sudo $pkg_manager clean all
-                case zypper
-                    sudo zypper install -y --force $argv[2..-1] && sudo zypper clean --all
+            if test -n "$pm_sync"
+                $pm_sync
             end
+            $pm_reinstall $argv[2..-1] && $pm_clean
 
         case remove nuke
             if test (count $argv) -lt 2
@@ -100,15 +124,11 @@ function sysmgmt -d "Comprehensive system management"
             end
             
             echo "Removing packages with $pkg_manager: $argv[2..-1]"
-            switch $pkg_manager
-                case apt
-                    sudo apt purge -y --auto-remove $argv[2..-1] && sudo apt autoremove --purge -y && sudo apt clean
-                case pacman
-                    sudo pacman -Rns --noconfirm $argv[2..-1] && sudo pacman -Scc --noconfirm
-                case dnf dnf5
-                    sudo $pkg_manager remove -y $argv[2..-1] && sudo $pkg_manager autoremove -y && sudo $pkg_manager clean all
-                case zypper
-                    sudo zypper remove -y $argv[2..-1] && sudo zypper clean --all
+            if $pm_remove $argv[2..-1]
+                if test -n "$pm_autoremove"
+                    $pm_autoremove
+                end
+                $pm_clean
             end
 
         case upgrade iago
@@ -117,62 +137,68 @@ function sysmgmt -d "Comprehensive system management"
                 case apt
                     echo "=> Updating repos..."
                     sudo apt update
-                    echo "==> Removing unnecessary packages..."
-                    sudo apt autoremove -y
-                    echo "===> Performing full upgrade..."
+                    echo "==> Performing full upgrade..."
                     sudo apt full-upgrade -y
+                    echo "===> Removing unnecessary packages..."
+                    sudo apt autoremove --purge -y
                     echo "====> Cleaning up..."
-                    sudo apt autoremove --purge -y && sudo apt clean
+                    sudo apt clean
                 case pacman
-                    # Handle AUR packages if helpers are installed
-                    echo ">>>>>>>>>>> AUR <<<<<<<<<<<<"
-                    echo "=> Upgrading AUR packages..."
-                    echo ">>>>>>>>>>>==*==<<<<<<<<<<<<"
+                    set -l aur_helper
                     if command -v paru >/dev/null 2>&1
-                        echo "   ..........................."
-                        echo "   ==> Upgrading with paru <=="
-                        echo "   ..........................."
-                        paru -Syu --noconfirm
-                        rd ~/.cache/paru/clone
+                        set aur_helper "paru"
                     else if command -v yay >/dev/null 2>&1
-                        echo "==> Upgrading with yay..."
-                        yay -Syu --noconfirm
+                        set aur_helper "yay"
                     else
-                        echo "==> No AUR helper found (paru/yay)"
+                        echo "=> No AUR helper found; installing paru..."
+                        sudo pacman -S --needed --noconfirm base-devel git
+                        set -l build_dir (mktemp -d)
+                        if git clone --quiet https://aur.archlinux.org/paru.git $build_dir
+                            pushd $build_dir
+                            makepkg -si --noconfirm
+                            popd
+                        end
+                        rm -rf $build_dir
+                        if command -v paru >/dev/null 2>&1
+                            set aur_helper "paru"
+                        else
+                            echo "=> paru install failed; falling back to pacman"
+                        end
                     end
-                    echo "  *** *** **** *** ***"
-                    echo "  *** pacman stage ***"
-                    echo "  *** *** **** *** ***"
-                    echo "=-> Updating repos..."
-                    sudo pacman -Syy
-                    echo " Removing orphans... =->"
+
+                    if test -n "$aur_helper"
+                        echo "=> Upgrading with $aur_helper (covers repo + AUR)..."
+                        $aur_helper -Syu --noconfirm
+                        echo "==> Trimming $aur_helper + pacman cache..."
+                        $aur_helper -Sc --noconfirm
+                    else
+                        echo "=> Upgrading with pacman..."
+                        sudo pacman -Syu --noconfirm
+                    end
+
+                    echo "=> Removing orphans..."
                     set -l orphans (pacman -Qtdq 2>/dev/null)
                     if test -n "$orphans"
                         sudo pacman -Rns --noconfirm $orphans
                     end
-                    echo "===> Performing upgrade..."
-                    sudo pacman -Syu --noconfirm
-                    echo "<.....................>"
-                    echo "<...> Cleaning up <...>"
-                    echo "<.....................>"
-                    sudo pacman -Scc --noconfirm
+
+                    if test -z "$aur_helper"
+                        echo "=> Cleaning package cache..."
+                        sudo pacman -Sc --noconfirm
+                    end
                 case dnf dnf5
-                    echo "=> Checking updates..."
-                    sudo $pkg_manager check-update
+                    echo "=> Performing upgrade..."
+                    sudo $pkg_manager upgrade --refresh -y
                     echo "==> Removing unnecessary packages..."
                     sudo $pkg_manager autoremove -y
-                    echo "===> Performing upgrade..."
-                    sudo $pkg_manager upgrade --refresh -y
-                    echo "====> Cleaning up..."
+                    echo "===> Cleaning up..."
                     sudo $pkg_manager clean all
                 case zypper
-                    echo "=> Refreshing repos..."
-                    sudo zypper refresh
+                    echo "=> Performing upgrade..."
+                    sudo zypper update -y
                     echo "==> Removing unnecessary packages..."
                     sudo zypper remove -u
-                    echo "===> Performing upgrade..."
-                    sudo zypper update -y
-                    echo "====> Cleaning up..."
+                    echo "===> Cleaning up..."
                     sudo zypper clean --all
             end
 
@@ -182,16 +208,7 @@ function sysmgmt -d "Comprehensive system management"
                 return 1
             end
             
-            switch $pkg_manager
-                case apt
-                    apt show $argv[2]
-                case pacman
-                    pacman -Si $argv[2]
-                case dnf dnf5
-                    $pkg_manager info $argv[2]
-                case zypper
-                    zypper info $argv[2]
-            end
+            $pm_info $argv[2]
 
         case desktop wutdt
             echo "Desktop Environment Info:"
@@ -204,7 +221,13 @@ function sysmgmt -d "Comprehensive system management"
                 echo "Error: pid requires a process name"
                 return 1
             end
-            top -p (pgrep -d , $argv[2])
+
+            set -l pids (pgrep -d , $argv[2])
+            if test -z "$pids"
+                echo "Error: no running process matching '$argv[2]'"
+                return 1
+            end
+            top -p $pids
 
         case '*'
             echo "Error: Unknown operation '$operation'"
