@@ -1,38 +1,44 @@
 function dlyt -d "YouTube download with multiple modes"
     if test (count $argv) -lt 2
         echo "Usage: dlyt MODE URL [URL2 URL3...]"
+        echo "       dlyt MODE -a FILE   (batch file of URLs, one per line)"
         echo "Modes:"
         echo "  video  - Best quality video, muxed (single video or playlist)"
         echo "  audio  - Best quality audio, raw stream, no post-processing"
         echo "  rip    - Best audio, transcoded to m4a, with metadata/thumbnail"
         echo "  both   - Best video AND best audio in one download pass (no re-fetch)"
         echo "Example: dlyt both https://youtube.com/playlist?list=..."
+        echo "Example: dlyt rip -a urls.txt"
         return 1
     end
 
     set -l mode $argv[1]
+    # -a/--batch-file is yt-dlp's own flag; it passes through untouched.
     set -l urls $argv[2..-1]
 
     switch $mode
         case rip
-            yt-dlp -f bestaudio --extract-audio --prefer-ffmpeg \
+            yt-dlp --cookies-from-browser firefox \
+                -f bestaudio --extract-audio \
                 --audio-format m4a --embed-thumbnail --add-metadata \
                 --parse-metadata "comment:%(webpage_url)s" \
                 -o '%(title)s.%(ext)s' $urls
         case audio
-            yt-dlp -f bestaudio $urls
+            yt-dlp --cookies-from-browser firefox -f bestaudio $urls
         case video
             # bv*+ba merges the true best video-only + audio-only streams;
             # plain "-f best" caps out at YouTube's old pre-muxed formats
             # (often <=720p) since higher resolutions are video-only.
-            yt-dlp -f "bv*+ba/b" --merge-output-format mkv \
+            yt-dlp --cookies-from-browser firefox \
+                -f "bv*+ba/b" --merge-output-format mkv \
                 -o '%(title)s.%(ext)s' $urls
         case both
             # One download pass gets both outputs: merge bv*+ba into the
             # final video, then -x extracts audio from that same merged
             # file locally via ffmpeg (no second network fetch).
             # --audio-format best = remux/copy, no lossy re-encode.
-            yt-dlp -f "bv*+ba/b" --merge-output-format mkv \
+            yt-dlp --cookies-from-browser firefox \
+                -f "bv*+ba/b" --merge-output-format mkv \
                 -x --audio-format best -k \
                 --embed-thumbnail --add-metadata \
                 -o '%(title)s.%(ext)s' $urls
